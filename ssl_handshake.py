@@ -54,6 +54,7 @@ class Connection(object):
     } ClientHello;
 
     """
+#TODO maintain state what all steps are performed
     def client_hello(self, host, port):
         ssl_client_hello = '\x16\x03\x01'
         \x01

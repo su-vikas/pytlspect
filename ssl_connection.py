@@ -77,7 +77,9 @@ class SSLConnection:
         return pkt
 
 
-    def _readRecordLayer(self,sock):
+
+    #@param parseUntil to stop the parsing when that information is extracted
+    def _readRecordLayer(self,sock,parseUntil):
         b = bytearray(0)
         recordHeaderLength = 1
 
@@ -125,6 +127,9 @@ class SSLConnection:
             if b[0] is HandshakeType.server_hello:
                 b = b[1:]
                 serverHello = ServerHello().parse(Parser(b))
+
+                if parseUntil is "ServerVersion": return serverHello.server_version
+
                 return serverHello.cipher_suite
             elif b[0] is HandshakeType.certificate:
                 certificate = Certificate().parse(Parser(b))
@@ -171,7 +176,7 @@ class SSLConnection:
             self._doPreHandshake()
             try:
                 self.clientSocket.send(pkt)
-                cipher = self._readRecordLayer(self.clientSocket)
+                cipher = self._readRecordLayer(self.clientSocket, None)
                 if cipher in ciphersuite:
                     cipher_accepted = cipher
                     cipher_id = '%06x' % cipher
@@ -189,10 +194,29 @@ class SSLConnection:
             except socket.error, msg:
                 print "[!] Could not connect to target host because %s" %msg
 
+    def enumerateSSLVersions(self):
+        cHello = ClientHello()
+        ciphersuite = CipherSuite.all_suites
+
+        sslVersions = [(3,0),(3,1),(3,2),(3,3)]
+        #loop for ssl versions
+        for ver in sslVersions:
+            pkt = self._clientHelloPacket(ver, ciphersuite)
+            self._doPreHandshake()
+
+            try:
+                self.clientSocket.send(pkt)
+                supportedVersion = self._readRecordLayer(self.clientSocket,"ServerVersion")
+                if supportedVersion is not None:
+                    print supportedVersion
+
+            except socket.error, msg:
+                print "[!] Could not connect to target host because %s" %msg
 
     def getIP(self):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
+        print self.ip
 
 def main(argv):
     if len(argv) == 1:
@@ -201,7 +225,8 @@ def main(argv):
         host = argv[1].strip()
         version = (3,2)
         conn = SSLConnection(host,version,443,5.0)
-        conn.enumerateCiphers(version)
+        #conn.enumerateCiphers(version)
+        conn.enumerateSSLVersions()
 
         "Resolve the IP "
         conn.getIP()

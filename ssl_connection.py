@@ -56,6 +56,7 @@ class SSLConnection:
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.ip = None
 
     def _doPreHandshake(self):
         self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -162,6 +163,7 @@ class SSLConnection:
         #ciphersuite=CipherSuite.aes256Suites
         cipher_accepted = None
         ciphersuite = CipherSuite.all_suites
+        #ciphersuite = CipherSuite.ecdheSuites
 
         #get the ciphersuites supported in preference order
         while len(ciphersuite) > 0:
@@ -173,13 +175,14 @@ class SSLConnection:
                 if cipher in ciphersuite:
                     cipher_accepted = cipher
                     cipher_id = '%06x' % cipher
+                    cipher_id = cipher_id.upper() # all names in upper case in constants.py
                     ciphersuite.remove(cipher_accepted)
                     #print len(ciphersuite)
                     if CipherSuite.cipher_suites.has_key(cipher_id):
                         print CipherSuite.cipher_suites[cipher_id]['name']
                         self.clientSocket.close()
                 else:
-                    print "[!] Server returned cipher not in ciphersuite"
+                    print "[!] Server returned cipher not in ciphersuite %s"%(cipher)
                     break
 
 
@@ -187,14 +190,21 @@ class SSLConnection:
                 print "[!] Could not connect to target host because %s" %msg
 
 
+    def getIP(self):
+        addr = socket.gethostbyname(self.host)
+        self.ip = addr
+
 def main(argv):
     if len(argv) == 1:
         print "[!] GIve host and port \n"
     else:
         host = argv[1].strip()
-        version = (3,1)
+        version = (3,2)
         conn = SSLConnection(host,version,443,5.0)
         conn.enumerateCiphers(version)
+
+        "Resolve the IP "
+        conn.getIP()
 
 if __name__ == "__main__":
     main(sys.argv)

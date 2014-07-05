@@ -1,3 +1,8 @@
+"""
+TODO
+- website does not support ssl message
+"""
+
 from utils.constants import *
 from utils.packetCreator import *
 import socket,binascii, sys
@@ -79,6 +84,7 @@ class SSLConnection:
 
 
     #@param parseUntil to stop the parsing when that information is extracted
+    # parseUntil  ServerVersion, Compression
     def _readRecordLayer(self,sock,parseUntil):
         b = bytearray(0)
         recordHeaderLength = 1
@@ -129,6 +135,7 @@ class SSLConnection:
                 serverHello = ServerHello().parse(Parser(b))
 
                 if parseUntil is "ServerVersion": return serverHello.server_version
+                if parseUntil is "Compression": return serverHello.compression_method
 
                 return serverHello.cipher_suite
             elif b[0] is HandshakeType.certificate:
@@ -213,6 +220,21 @@ class SSLConnection:
             except socket.error, msg:
                 print "[!] Could not connect to target host because %s" %msg
 
+    def isCompressionSupported(self):
+        cHello = ClientHello()
+        ciphersuite = CipherSuite.all_suites
+        version=(3,1)
+        pkt = self._clientHelloPacket(version, ciphersuite)
+        self._doPreHandshake()
+
+        try:
+            self.clientSocket.send(pkt)
+            compressionSupported = self._readRecordLayer(self.clientSocket,"Compression")
+            print compressionSupported
+
+        except socket.error, msg:
+            print "[!] Could not connect to target host because %s" %msg
+
     def getIP(self):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
@@ -226,7 +248,8 @@ def main(argv):
         version = (3,2)
         conn = SSLConnection(host,version,443,5.0)
         #conn.enumerateCiphers(version)
-        conn.enumerateSSLVersions()
+        #conn.enumerateSSLVersions()
+        conn.isCompressionSupported()
 
         "Resolve the IP "
         conn.getIP()

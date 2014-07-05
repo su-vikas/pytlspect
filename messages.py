@@ -113,7 +113,7 @@ class ClientHello(HandshakeMsg):
         self.session_id = session_id   #THis field should be empty if no session_id is available or the client wishes to generate new security parameters
         self.cipher_suites = cipher_suites
         self.certificate_types = certificate_types
-        self.compression_methods = [0]
+        self.compression_methods = [0,1,64]
         if srpUsername:
             self.srp_username = bytearray(srpUsername, "utf-8")
 

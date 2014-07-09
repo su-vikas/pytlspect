@@ -125,6 +125,7 @@ class SSLConnection:
         while 1:
             try:
                 bytes_read = sock.recv(recordLayer.length - len(b))
+                #print recordLayer.length, len(b), len(bytes_read)
             except scoket.error, msg:
                 print "[!] Error in reading from socket because %s" %msg
 
@@ -140,10 +141,24 @@ class SSLConnection:
                 if parseUntil is "Compression": return serverHello.compression_method
 
                 return serverHello.cipher_suite
+
             elif b[0] is HandshakeType.certificate:
-                certificate = Certificate().parse(Parser(b))
+            #TODO serious hack to fetch all data from socket, need to do fetching in more better way
+                if len(b) != recordLayer.length:
+                    bytes_read = sock.recv(recordLayer.length - len(b))
+                    b += bytearray(bytes_read)
+
+                b = b[1:]
+                certificate = Certificate(CertificateType.x509).parse(Parser(b))
+                print "certtype",len(certificate.certChain.x509List)
+                for x in certificate.certChain.x509List:
+                    print x.subject
+                    print "----"
             elif b[0] is HandshakeType.server_hello_done:
                 print "[+] Server hello done"
+            else:
+                pass
+                #print "maza nahi aya"
 
             if len(b) == recordLayer.length:
                 break
@@ -249,10 +264,63 @@ class SSLConnection:
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
 
+    def scanCertificates(self,host, version):
+        cHello = ClientHello()
+        ciphersuite = CipherSuite.all_suites
+        version = (3,2)
+        pkt = self._clientHelloPacket(version, ciphersuite)
+        self._doPreHandshake()
+        try:
+            self.clientSocket.send(pkt)
+            self._readRecordLayer(self.clientSocket, "Certificate")
+            self._readRecordLayer(self.clientSocket, "Certificate")
+            self.clientSocket.close()
+        except socket.error, msg:
+            print "[!] Could not connect to target host because %s" %msg
+
     def getIP(self):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
         print self.ip
+
+
+
+def cipherTest(host, version):
+    conn = SSLConnection(host,version,443,5.0)
+    "Resolve the IP "
+    print "SCAN RESULTS FOR HOST:",host," IP:", conn.getIP(), " \n"
+
+    sslVersions = conn.enumerateSSLVersions()
+    print "\n------- SSL VERSIONS SUPPORTED ------"
+    if len(sslVersions)> 0:
+        for ver in sslVersions:
+            print ver
+    else:
+        print "No version detected strangely"
+
+    maxSSLVersion = max(sslVersions, key=itemgetter(1))
+    #get the ciphers supported
+    cipherSuitesDetected = conn.enumerateCiphers(maxSSLVersion)
+    print "\n----- CIPHERS SUPPORTED IN DEFAULT PREFERRED ORDER -------"
+    for cipher_id in cipherSuitesDetected:
+        print CipherSuite.cipher_suites[cipher_id]['name']
+
+    print "\n--------- LIST OF POTENTIALLY WEAK CIPHERS ----"
+    for cipher_id in cipherSuitesDetected:
+        if 'RC4' in CipherSuite.cipher_suites[cipher_id]['enc']:
+            print CipherSuite.cipher_suites[cipher_id]['name']
+
+    compression = conn.isCompressionSupported()
+    if compression is None:
+        print "\n-- COMPRESSION SUPPORT: No"
+    else:
+        print "\n-- COMPRESSION SUPPORT: Yes"
+
+def certificateTest(host, version):
+    version =(3,2)
+    conn = SSLConnection(host,version,443,5.0)
+    conn.scanCertificates(host, version)
+
 
 def main(argv):
     if len(argv) == 1:
@@ -260,36 +328,8 @@ def main(argv):
     else:
         host = argv[1].strip()
         version = (3,2)
-        conn = SSLConnection(host,version,443,5.0)
-
-        "Resolve the IP "
-        print "SCAN RESULTS FOR HOST:",host," IP:", conn.getIP(), " \n"
-
-        sslVersions = conn.enumerateSSLVersions()
-        print "\n------- SSL VERSIONS SUPPORTED ------"
-        if len(sslVersions)> 0:
-            for ver in sslVersions:
-                print ver
-        else:
-            print "No version detected strangely"
-
-        maxSSLVersion = max(sslVersions, key=itemgetter(1))
-        #get the ciphers supported
-        cipherSuitesDetected = conn.enumerateCiphers(maxSSLVersion)
-        print "\n----- CIPHERS SUPPORTED IN DEFAULT PREFERRED ORDER -------"
-        for cipher_id in cipherSuitesDetected:
-            print CipherSuite.cipher_suites[cipher_id]['name']
-
-        print "\n--------- LIST OF POTENTIALLY WEAK CIPHERS ----"
-        for cipher_id in cipherSuitesDetected:
-            if 'RC4' in CipherSuite.cipher_suites[cipher_id]['enc']:
-                print CipherSuite.cipher_suites[cipher_id]['name']
-
-        compression = conn.isCompressionSupported()
-        if compression is None:
-            print "\n-- COMPRESSION SUPPORT: No"
-        else:
-            print "\n-- COMPRESSION SUPPORT: Yes"
+        #cipherTest(host, version)
+        certificateTest(host, version)
 
 
 if __name__ == "__main__":

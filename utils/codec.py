@@ -32,6 +32,7 @@ class Parser(object):
         self.index = 0
 
     def get(self, length):
+        #print self.index, length, len(self.bytes)
         if self.index + length > len(self.bytes):
             raise SyntaxError()
         x = 0

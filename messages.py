@@ -2,6 +2,8 @@ from utils.packetCreator import *
 from utils.constants import *
 from utils.cryptomath import *
 from utils.codec import *
+from x509 import *
+from x509certchain import *
 """
 Format of an SSL record
 Byte 0 = SSL record type

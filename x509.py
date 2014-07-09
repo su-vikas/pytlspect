@@ -1,4 +1,4 @@
-# Authors: 
+# Authors:
 #   Trevor Perrin
 #   Google - parsing subject field
 #
@@ -6,10 +6,10 @@
 
 """Class representing an X.509 certificate."""
 
-from .utils.asn1parser import ASN1Parser
-from .utils.cryptomath import *
-from .utils.keyfactory import _createPublicRSAKey
-from .utils.pem import *
+from utils.asn1parser import ASN1Parser
+from utils.cryptomath import *
+from utils.keyfactory import _createPublicRSAKey
+from utils.pem import *
 
 
 class X509(object):
@@ -64,12 +64,10 @@ class X509(object):
             subjectPublicKeyInfoIndex = 5
 
         #Get the subject
-        self.subject = tbsCertificateP.getChildBytes(\
-                           subjectPublicKeyInfoIndex - 1)
+        self.subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
 
         #Get the subjectPublicKeyInfo
-        subjectPublicKeyInfoP = tbsCertificateP.getChild(\
-                                    subjectPublicKeyInfoIndex)
+        subjectPublicKeyInfoP = tbsCertificateP.getChild(subjectPublicKeyInfoIndex)
 
         #Get the algorithm
         algorithmP = subjectPublicKeyInfoP.getChild(0)

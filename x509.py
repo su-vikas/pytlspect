@@ -99,9 +99,10 @@ class X509(object):
         self.signature_algorithm = ASN1Parser(ASN1Parser(tbsCertificateP.getChildBytes(2)).getChildBytes(0))
 
         oid = self.ObjectIdentifierDecoder(self.signature_algorithm.value, self.signature_algorithm.length)
-        print oid
+        oid_str = get_oid_str(oid)
+
         for key,value in OIDMap.oid_map.iteritems():
-            if key == oid:
+            if key == oid_str:
                 print value
 
         #get the issuer
@@ -196,4 +197,14 @@ class X509(object):
                 # page 7
                 print "error, panga"
         return oid
+
+def get_oid_str(oid_tuple):
+    oid_str = ""
+    for elem in oid_tuple:
+        oid_str = oid_str + str(elem) + '.'
+
+    oid_str_len = len(oid_str) - 1
+    oid_str = oid_str[0:oid_str_len]
+
+    return oid_str
 

@@ -107,6 +107,65 @@ class AlertDescription:
     no_renegotiation = 100
     unknown_psk_identity = 115
 
+class OIDMap:
+    # taken from https://github.com/hiviah/pyx509/tree/master/pkcs7/asn1_models
+    '''
+    Map of OIDs and their names
+    '''
+    oid_map = {
+           "1.3.14.3.2.26" : "SHA-1",
+           "2.16.840.1.101.3.4.2.1" : "SHA-256",
+           "2.16.840.1.101.3.4.2.2" : "SHA-384",
+           "2.16.840.1.101.3.4.2.3" : "SHA-512",
+           "1.2.840.113549.1.7.1" : "data",
+           "1.2.840.113549.1.7.2" : "signedData",
+           "1.2.840.113549.1.1.5" : "SHA1/RSA",
+           "1.2.840.113549.1.1.1" : "RSA",
+           "1.2.840.113549.1.1.11" : "SHA256/RSA",
+           "1.2.840.10040.4.1" : "DSA",
+           "1.2.840.10040.4.3" : "SHA1/DSA",
+
+           "2.5.4.6" : "id-at-countryName",
+           "2.5.4.10" : "id-at-organizationName ",
+           "2.5.4.3" : "id-at-commonName",
+           "2.5.4.11" : "id-at-organizationalUnitName",
+
+           "2.5.29.17" : "id-ce-subjectAltName",
+           "2.5.29.19" : "basicConstraints",
+           "2.5.29.32" : "Certificate policies",
+           "1.3.6.1.5.5.7.1.3" : "id-pe-qcStatements",
+           "2.5.29.15" : "id-ce-keyUsage",
+           "2.5.29.14" : "id-ce-subjectKeyIdentifier ",
+           "2.5.29.31" : "id-ce-CRLDistributionPoints ",
+           "2.5.29.35" : "id-ce-authorityKeyIdentifier ",
+
+           "2.5.29.20" : "CRL Number",
+           "2.5.29.21" : "Reason Code",
+           "2.5.29.24" : "Invalidity Data",
+
+
+           "1.2.840.113549.1.9.3" : "contentType",
+           "1.2.840.113549.1.9.4" : "messageDigest",
+           "1.2.840.113549.1.9.5" : "Signing Time"
+           }
+
+class AlgorithmIdentifier:
+    #https://www.ipa.go.jp/security/rfc/RFC3279EN.html#211
+    # sha-1 with rsa encryption: 1.2.840.113549.1.1.5
+    shawithrsa = bytearray(b'\x2a\x86\x48\x86\xf7\x0d\x01\x01\x05')
+
+    #sha256 with rsa encryption
+    sha256withrsa = bytearray(b'\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b')
+
+    # md-5 with rsa encryption: 1.2.840.113549.1.1.4
+    md5withrsa = bytearray(b'\x2a\x86\x48\x86\xf7\x0d\x01\x01\x04')
+
+    # md-2 with rsa encryption: 1.2.840.113549.1.1.2
+    md2withrsa = bytearray(b'\x2a\x86\x48\x86\xf7\x0d\x01\x01\x02')
+
+
+    # dsa with sha 1
+    # ecdsa with sha1
 
 class CipherSuite:
     # Weird pseudo-ciphersuite from RFC 5746

@@ -4,13 +4,30 @@
 #
 # See the LICENSE file for legal information regarding use of this file.
 
+#TODO
+# Common names
+# Alternative names
+# prefix handling
+# valid from
+# valid until
+# key (weak key, debian)
+# issuer
+# signature algorithm
+# extended validation
+# revocation information
+# revocation status
+# Trusted
+
+
+
 """Class representing an X.509 certificate."""
 
 from utils.asn1parser import ASN1Parser
+from utils.constants import *
 from utils.cryptomath import *
 from utils.keyfactory import _createPublicRSAKey
 from utils.pem import *
-
+import binascii
 
 class X509(object):
     """This class represents an X.509 certificate.
@@ -29,6 +46,16 @@ class X509(object):
         self.bytes = bytearray(0)
         self.publicKey = None
         self.subject = None
+
+        #certificate info
+        self.version = None
+        self.serial_number = None
+        self.signature_algorithm = None
+        self.issuer = None
+        self.validFrom = None
+        self.validityUntil = None
+        self.subject = None
+        self.pub_key_info = None
 
     def parse(self, s):
         """Parse a PEM-encoded X.509 certificate.
@@ -63,8 +90,35 @@ class X509(object):
         else:
             subjectPublicKeyInfoIndex = 5
 
+        # serial number of certificate
+        self.serial_number = ASN1Parser(tbsCertificateP.getChildBytes(1))
+        print "serial number", b2a_hex(self.serial_number.value)
+
+
+        #TODO signature algorithm, not workign yet
+        self.signature_algorithm = ASN1Parser(ASN1Parser(tbsCertificateP.getChildBytes(2)).getChildBytes(0))
+
+        oid = self.ObjectIdentifierDecoder(self.signature_algorithm.value, self.signature_algorithm.length)
+        print oid
+        for key,value in OIDMap.oid_map.iteritems():
+            if key == oid:
+                print value
+
+        #get the issuer
+        self.issuer = ASN1Parser(tbsCertificateP.getChildBytes(3))
+        print "issuer", self.issuer.value
+
+
+        #get the validity
+        self.validFrom = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(0)
+        print "valid from", self.validFrom.value
+
+        self.validUntil = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(1)
+        print "valid until", self.validUntil.value
+
         #Get the subject
         self.subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
+        print "subject", self.subject, "\n"
 
         #Get the subjectPublicKeyInfo
         subjectPublicKeyInfoP = tbsCertificateP.getChild(subjectPublicKeyInfoIndex)
@@ -105,4 +159,41 @@ class X509(object):
     def writeBytes(self):
         return self.bytes
 
+    def ObjectIdentifierDecoder(self, value, length):
+        oid = ()
+        index = 1
+
+        # for 1st byte
+        first_byte = value[0]
+        if 0 <= first_byte <= 39:
+            oid = (0,) + oid
+        elif 40 <= first_byte <= 79:
+            oid = (1, first_byte-40) + oid[1:]
+        elif first_byte >= 80:
+            oid = (2, first_byte-80) + oid[1:]
+        else:
+            print "error, panga with 1st byte"
+
+        while index < length:
+            subId = value[index]
+            index += 1
+            if subId < 128:
+                oid = oid + (subId,)
+            elif subId>128:
+                nextSubId = subId
+                subId = 0
+                while nextSubId >=128:
+                    subId = (subId << 7) + (nextSubId & 0x7F)
+                    if index >= length:
+                        print "error, panga"
+                    nextSubId =value[index]
+                    index += 1
+                oid = oid + ((subId<<7)+nextSubId,)
+            elif subId == 128:
+                # ASN.1 spec forbids leading zeros (0x80) in OID
+                # encoding, tolerating it opens a vulnerability. See
+                # http://www.cosic.esat.kuleuven.be/publications/article-1432.pdf
+                # page 7
+                print "error, panga"
+        return oid
 

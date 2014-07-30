@@ -24,6 +24,7 @@ class ASN1Parser(object):
     def getChild(self, which):
         return ASN1Parser(self.getChildBytes(which))
 
+
     def getChildBytes(self, which):
         p = Parser(self.value)
         for x in range(which+1):
@@ -42,5 +43,37 @@ class ASN1Parser(object):
         else:
             lengthLength = firstLength & 0x7F
             return p.get(lengthLength)
+
+class RDNSequence:
+    def parse_rdnsequence(self, p):
+        relative_distinguished_name = ASN1Parser(p).getChild(0)
+        attribute_value_assertion = ASN1Parser(relative_distinguished_name.value).getChild(0)
+        print "assertion" , list(relative_distinguished_name.value)
+        attribute_type = ASN1Parser(attribute_value_assertion.value).getChild(0)
+        attribute_value = ASN1Parser(attribute_value_assertion.value).getChild(1)
+        print list(attribute_type.value)
+        print list(attribute_value.value)
+        #print list(relative_distinguished_name.value)
+        #self.parse_attribute_value_assertion(relative_distinguished_name.value)
+        #print list(relative_distinguished_name)
+
+    def parse_attribute_value_assertion(self,p):
+        #attribute_value_assertion = ASN1Parser(p).getChildBytes(0)
+        attribute_value_assertion = ASN1Parser(p).getChildBytes(1)
+        #print "value_assertion"
+        attribute_type = ASN1Parser(attribute_value_assertion).getChildBytes(0)
+        #attribute_value = ASN1Parser(attribute_value_assertion).getChildBytes(1)
+        print "value assertion", list(attribute_type)
+        #self.parse_attribute_type(attribute_type)
+        #self.parse_attribute_value(attribute_value)
+
+    def parse_attribute_value(self, p):
+        attribute_value = ASN1Parser(p).getChildBytes(0)
+        print "attribute value", list(attribute_value)
+
+    def parse_attribute_type(self,p):
+        attribute_type = ASN1Parser(p).getChildBytes(0)
+        print "attribute type", list(attribute_value_assertion)
+
 
 

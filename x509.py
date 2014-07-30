@@ -22,7 +22,7 @@
 
 """Class representing an X.509 certificate."""
 
-from utils.asn1parser import ASN1Parser
+from utils.asn1parser import ASN1Parser, RDNSequence
 from utils.constants import *
 from utils.cryptomath import *
 from utils.keyfactory import _createPublicRSAKey
@@ -92,43 +92,49 @@ class X509(object):
 
         # serial number of certificate
         self.serial_number = ASN1Parser(tbsCertificateP.getChildBytes(1))
-        print "serial number", b2a_hex(self.serial_number.value)
-
+        print "[+] Serial number: ", b2a_hex(self.serial_number.value)
 
         #TODO signature algorithm, not workign yet
-        self.signature_algorithm = ASN1Parser(ASN1Parser(tbsCertificateP.getChildBytes(2)).getChildBytes(0))
+        sign_algo = ASN1Parser(ASN1Parser(tbsCertificateP.getChildBytes(2)).getChildBytes(0))
 
-        oid = self.ObjectIdentifierDecoder(self.signature_algorithm.value, self.signature_algorithm.length)
+        oid = self.ObjectIdentifierDecoder(sign_algo.value, sign_algo.length)
         oid_str = get_oid_str(oid)
+
+        self.signature_algorithm = oid_str
 
         for key,value in OIDMap.oid_map.iteritems():
             if key == oid_str:
-                print value
+                print "[+] Signature ALgorithm: ", value
 
         #get the issuer
         self.issuer = ASN1Parser(tbsCertificateP.getChildBytes(3))
-        print "issuer", self.issuer.value
+        RDNSequence().parse_rdnsequence(self.issuer.value)
 
+        print "[+] issuer", self.issuer.value
 
         #get the validity
         self.validFrom = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(0)
-        print "valid from", self.validFrom.value
+        self.validFrom = self.validFrom.value[:6]
+        print "[+] valid from:" , self.validFrom
 
         self.validUntil = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(1)
-        print "valid until", self.validUntil.value
+        self.validUntil = self.validUntil.value[:6]
+        print "[+] Valid until: ", self.validUntil
 
         #Get the subject
         self.subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
-        print "subject", self.subject, "\n"
+        print "[+] Subject:", self.subject
 
         #Get the subjectPublicKeyInfo
+        # sequence -> sequence -> object_identifier
         subjectPublicKeyInfoP = tbsCertificateP.getChild(subjectPublicKeyInfoIndex)
+        algorithmP = ASN1Parser(subjectPublicKeyInfoP.getChildBytes(0)).getChild(0)
+        rsaOID = self.ObjectIdentifierDecoder(algorithmP.value, algorithmP.length)
+        rsaOID_str = get_oid_str(rsaOID)
 
-        #Get the algorithm
-        algorithmP = subjectPublicKeyInfoP.getChild(0)
-        rsaOID = algorithmP.value
-        if list(rsaOID) != [6, 9, 42, 134, 72, 134, 247, 13, 1, 1, 1, 5, 0]:
-            raise SyntaxError("Unrecognized AlgorithmIdentifier")
+        for key,value in OIDMap.oid_map.iteritems():
+            if key == rsaOID_str:
+                print "[+] Algorithm: ", value
 
         #Get the subjectPublicKey
         subjectPublicKeyP = subjectPublicKeyInfoP.getChild(1)
@@ -148,6 +154,7 @@ class X509(object):
 
         #Create a public key instance
         self.publicKey = _createPublicRSAKey(n, e)
+        print "[+] Key Size: ",len(self.publicKey) ,"\n"
 
     def getFingerprint(self):
         """Get the hex-encoded fingerprint of this certificate.
@@ -207,4 +214,17 @@ def get_oid_str(oid_tuple):
     oid_str = oid_str[0:oid_str_len]
 
     return oid_str
+
+def parse_rdnsequence(p):
+    relative_distinguished_name = ASN1Parser(p).getChildBytes(0)
+    parse_attribute_value_assertion(relative_distinguished_name)
+    #print list(relative_distinguished_name)
+
+def parse_attribute_value_assertion(p):
+    attribute_value_assertion = ASN1Parser(p).getChildBytes(0)
+    attribute_type = ASN1Parser(attribute_value_assertion).getChildBytes(0)
+
+    print "value assertion", list(attribute_value_assertion)
+
+
 

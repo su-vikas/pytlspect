@@ -150,10 +150,10 @@ class SSLConnection:
 
                 b = b[1:]
                 certificate = Certificate(CertificateType.x509).parse(Parser(b))
-                print "certtype",len(certificate.certChain.x509List)
-                for x in certificate.certChain.x509List:
-                    print x.subject
-                    print "----"
+                #print "certtype",len(certificate.certChain.x509List)
+                #for x in certificate.certChain.x509List:
+                #    print x.subject
+                #    print "----"
             elif b[0] is HandshakeType.server_hello_done:
                 print "[+] Server hello done"
             else:

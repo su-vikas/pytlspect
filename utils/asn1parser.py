@@ -46,13 +46,24 @@ class ASN1Parser(object):
 
 class RDNSequence:
     def parse_rdnsequence(self, p):
+        print len(p)
+        if p[0] == '\x30':
+            print "yohoo"
+
+
+
+
+
+
+        #print list(p)
         relative_distinguished_name = ASN1Parser(p).getChild(0)
+        #print list(relative_distinguished_name.value)
         attribute_value_assertion = ASN1Parser(relative_distinguished_name.value).getChild(0)
         print "assertion" , list(relative_distinguished_name.value)
-        attribute_type = ASN1Parser(attribute_value_assertion.value).getChild(0)
-        attribute_value = ASN1Parser(attribute_value_assertion.value).getChild(1)
-        print list(attribute_type.value)
-        print list(attribute_value.value)
+        #attribute_type = ASN1Parser(attribute_value_assertion.value).getChild(0)
+        #attribute_value = ASN1Parser(attribute_value_assertion.value).getChild(1)
+        #print list(attribute_type.value)
+        #print list(attribute_value.value)
         #print list(relative_distinguished_name.value)
         #self.parse_attribute_value_assertion(relative_distinguished_name.value)
         #print list(relative_distinguished_name)
@@ -74,6 +85,4 @@ class RDNSequence:
     def parse_attribute_type(self,p):
         attribute_type = ASN1Parser(p).getChildBytes(0)
         print "attribute type", list(attribute_value_assertion)
-
-
 

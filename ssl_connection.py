@@ -7,6 +7,8 @@ from utils.constants import *
 from utils.packetCreator import *
 from operator import itemgetter
 import socket,binascii, sys
+import time
+import copy
 
 from messages import *
 import pdb
@@ -65,18 +67,19 @@ class SSLConnection:
         self.timeout = timeout
         self.ip = None
 
+
     def _doPreHandshake(self):
         self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.clientSocket.connect((self.host, self.port))
         self.clientSocket.settimeout(self.timeout)
 
-    def _clientHelloPacket(self, version, cipherSuite):
+    def _clientHelloPacket(self, version, ciphersuite):
         cHello = ClientHello()
         session = bytearray(0)
-        if cipherSuite is None:
-            cipherSuite = CipherSuite.all
+        if ciphersuite is None:
+            ciphersuite =copy.copy(CipherSuite.all_suites)
 
-        cHello.create(version, getRandomBytes(32), session, cipherSuite)
+        cHello.create(version, getRandomBytes(32), session, ciphersuite)
         p = bytearray()
         p = cHello.write()
         recordHeader = RecordHeader3().create(version, ContentType.handshake, len(p))
@@ -107,10 +110,11 @@ class SSLConnection:
                             return
                     else:
                         print "[!] unknown ssl record layer"
+                        break
                 elif len(b) == recordHeaderLength:
                     break
 
-            except scoket.error, msg:
+            except socket.error, msg:
                 print "[!] Error in reading from socket because %s" %msg
 
         #parse the record layer
@@ -191,7 +195,7 @@ class SSLConnection:
         cipherSuitesDetected = []
         cHello = ClientHello()
         cipher_accepted = None
-        ciphersuite = CipherSuite.all_suites
+        ciphersuite =copy.copy(CipherSuite.all_suites)
         #ciphersuite = CipherSuite.ecdheSuites
 
         #get the ciphersuites supported in preference order
@@ -225,7 +229,7 @@ class SSLConnection:
 
     def enumerateSSLVersions(self):
         cHello = ClientHello()
-        ciphersuite = CipherSuite.all_suites
+        ciphersuite =copy.copy(CipherSuite.all_suites)
         supportedVersions = []
 
         sslVersions = [(3,0),(3,1),(3,2),(3,3)]
@@ -250,7 +254,7 @@ class SSLConnection:
 
     def isCompressionSupported(self):
         cHello = ClientHello()
-        ciphersuite = CipherSuite.all_suites
+        ciphersuite =copy.copy(CipherSuite.all_suites)
         version=(3,1)
         pkt = self._clientHelloPacket(version, ciphersuite)
         self._doPreHandshake()
@@ -266,8 +270,9 @@ class SSLConnection:
 
     def scanCertificates(self,host, version):
         cHello = ClientHello()
-        ciphersuite = CipherSuite.all_suites
-        version = (3,2)
+        ciphersuite =copy.copy(CipherSuite.all_suites)
+        #print len(ciphersuite)
+        #version = (3,2)
         pkt = self._clientHelloPacket(version, ciphersuite)
         self._doPreHandshake()
         try:
@@ -287,39 +292,45 @@ class SSLConnection:
 
 def cipherTest(host, version):
     conn = SSLConnection(host,version,443,5.0)
-    "Resolve the IP "
+    #Resolve the IP
     print "SCAN RESULTS FOR HOST:",host," IP:", conn.getIP(), " \n"
 
     sslVersions = conn.enumerateSSLVersions()
-    print "\n------- SSL VERSIONS SUPPORTED ------"
+    print "\n[+] SSL VERSIONS SUPPORTED:"
     if len(sslVersions)> 0:
         for ver in sslVersions:
-            print ver
+            print "     ",ver
     else:
         print "No version detected strangely"
 
     maxSSLVersion = max(sslVersions, key=itemgetter(1))
     #get the ciphers supported
     cipherSuitesDetected = conn.enumerateCiphers(maxSSLVersion)
-    print "\n----- CIPHERS SUPPORTED IN DEFAULT PREFERRED ORDER -------"
+    print "\n[+] CIPHERS SUPPORTED IN DEFAULT PREFERRED ORDER:"
     for cipher_id in cipherSuitesDetected:
-        print CipherSuite.cipher_suites[cipher_id]['name']
+        print "     " + CipherSuite.cipher_suites[cipher_id]['name']
 
-    print "\n--------- LIST OF POTENTIALLY WEAK CIPHERS ----"
+    print "\n[+] LIST OF POTENTIALLY WEAK CIPHERS:"
     for cipher_id in cipherSuitesDetected:
         if 'RC4' in CipherSuite.cipher_suites[cipher_id]['enc']:
-            print CipherSuite.cipher_suites[cipher_id]['name']
+            print "     "+CipherSuite.cipher_suites[cipher_id]['name']
 
     compression = conn.isCompressionSupported()
     if compression is None:
-        print "\n-- COMPRESSION SUPPORT: No"
+        print "[-] Error in getting compression value"
     else:
-        print "\n-- COMPRESSION SUPPORT: Yes"
+        if compression == 0:
+            print "\n[+] COMPRESSION SUPPORT: No"
+        else:
+            print "\n[+] COMPRESSION SUPPORT: Yes"
+
+    conn = None
+
 
 def certificateTest(host, version):
-    version =(3,2)
-    conn = SSLConnection(host,version,443,5.0)
-    conn.scanCertificates(host, version)
+    version=(3,2)
+    connection_obj = SSLConnection(host,version,443,5.0)
+    connection_obj.scanCertificates(host, version)
 
 
 def main(argv):
@@ -328,9 +339,9 @@ def main(argv):
     else:
         host = argv[1].strip()
         version = (3,2)
-        #cipherTest(host, version)
+        cipherTest(host, version)
+        time.sleep(2)
         certificateTest(host, version)
-
 
 if __name__ == "__main__":
     main(sys.argv)

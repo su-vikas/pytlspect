@@ -109,7 +109,7 @@ class X509(object):
                 print "[+] Signature ALgorithm: ", value
 
         #get the issuer
-        self.issuer = ASN1Parser(tbsCertificateP.getChildBytes(3))
+        self.issuer = tbsCertificateP.getChildBytes(3)
         print "[+] issuer"
         counter = 0
         while 1:

@@ -126,6 +126,8 @@ class OIDMap:
            "1.2.840.10040.4.3" : "SHA1withDSA",
 
            "2.5.4.6" : "id-at-countryName",
+           "2.5.4.8": "id-at-stateorProvinceName",
+           "2.5.4.7" : "id-at-localityName",
            "2.5.4.10" : "id-at-organizationName ",
            "2.5.4.3" : "id-at-commonName",
            "2.5.4.11" : "id-at-organizationalUnitName",

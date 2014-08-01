@@ -22,12 +22,13 @@
 
 """Class representing an X.509 certificate."""
 
-from utils.asn1parser import ASN1Parser, RDNSequence
+from utils.asn1parser import ASN1Parser
 from utils.constants import *
 from utils.cryptomath import *
 from utils.keyfactory import _createPublicRSAKey
 from utils.pem import *
 import binascii
+from utils.asn1 import *
 
 
 class X509(object):
@@ -109,9 +110,20 @@ class X509(object):
 
         #get the issuer
         self.issuer = ASN1Parser(tbsCertificateP.getChildBytes(3))
-        RDNSequence().parse_rdnsequence(self.issuer.value)
+        print "[+] issuer"
+        counter = 0
+        while 1:
+            try:
+                field3 = ASN1Parser(self.issuer).getChild(counter).getChild(0).getChild(0)
+                oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
+                oid_str = get_oid_str(oid)
+                for key,value in OIDMap.oid_map.iteritems():
+                    if key == oid_str:
+                        print "     [+] ",value,":", ASN1Parser(self.issuer).getChild(counter).getChild(0).getChild(1).value
+                counter +=1
+            except:
+                break
 
-        print "[+] issuer", self.issuer.value
 
         #get the validity
         self.validFrom = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(0)
@@ -124,7 +136,49 @@ class X509(object):
 
         #Get the subject
         self.subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
-        print "[+] Subject:", self.subject
+        # get one level in
+        # CANT HANDLE IF ANYTHING CHANGES.  HACKING TO PARSE CERT
+        print "[+] Subject:"
+        counter = 0
+        while 1:
+            try:
+                field3 = ASN1Parser(self.subject).getChild(counter).getChild(0).getChild(0)
+                oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
+                oid_str = get_oid_str(oid)
+                for key,value in OIDMap.oid_map.iteritems():
+                    if key == oid_str:
+                        print "     [+] ",value,":", ASN1Parser(self.subject).getChild(counter).getChild(0).getChild(1).value
+                counter +=1
+            except:
+                break
+
+
+
+        """
+        #field 1
+        countryName = ASN1Parser(self.subject).getChild(0).getChild(0).getChild(0)
+        oid = self.ObjectIdentifierDecoder(countryName.value, countryName.length)
+        oid_str = get_oid_str(oid)
+        for key,value in OIDMap.oid_map.iteritems():
+            if key == oid_str:
+                print "     [+] ",value, ASN1Parser(self.subject).getChild(0).getChild(0).getChild(1).value
+
+        #field 2
+        state_or_province = ASN1Parser(self.subject).getChild(1).getChild(0).getChild(0)
+        oid = self.ObjectIdentifierDecoder(state_or_province.value, state_or_province.length)
+        oid_str = get_oid_str(oid)
+        for key,value in OIDMap.oid_map.iteritems():
+            if key == oid_str:
+                print "     [+] ",value, ASN1Parser(self.subject).getChild(1).getChild(0).getChild(1).value
+
+        #field 3
+        field3 = ASN1Parser(self.subject).getChild(2).getChild(0).getChild(0)
+        oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
+        oid_str = get_oid_str(oid)
+        for key,value in OIDMap.oid_map.iteritems():
+            if key == oid_str:
+                print "     [+] ",value, ASN1Parser(self.subject).getChild(2).getChild(0).getChild(1).value
+        """
 
         #Get the subjectPublicKeyInfo
         # sequence -> sequence -> object_identifier

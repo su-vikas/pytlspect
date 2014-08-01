@@ -28,7 +28,6 @@ from utils.cryptomath import *
 from utils.keyfactory import _createPublicRSAKey
 from utils.pem import *
 import binascii
-from utils.asn1 import *
 
 
 class X509(object):
@@ -94,7 +93,7 @@ class X509(object):
 
         # serial number of certificate
         self.serial_number = ASN1Parser(tbsCertificateP.getChildBytes(1))
-        print "[+] Serial number: ", b2a_hex(self.serial_number.value)
+        print "[+] Serial number: 0x"+b2a_hex(self.serial_number.value)
 
         #TODO signature algorithm, not workign yet
         sign_algo = ASN1Parser(ASN1Parser(tbsCertificateP.getChildBytes(2)).getChildBytes(0))
@@ -151,34 +150,6 @@ class X509(object):
                 counter +=1
             except:
                 break
-
-
-
-        """
-        #field 1
-        countryName = ASN1Parser(self.subject).getChild(0).getChild(0).getChild(0)
-        oid = self.ObjectIdentifierDecoder(countryName.value, countryName.length)
-        oid_str = get_oid_str(oid)
-        for key,value in OIDMap.oid_map.iteritems():
-            if key == oid_str:
-                print "     [+] ",value, ASN1Parser(self.subject).getChild(0).getChild(0).getChild(1).value
-
-        #field 2
-        state_or_province = ASN1Parser(self.subject).getChild(1).getChild(0).getChild(0)
-        oid = self.ObjectIdentifierDecoder(state_or_province.value, state_or_province.length)
-        oid_str = get_oid_str(oid)
-        for key,value in OIDMap.oid_map.iteritems():
-            if key == oid_str:
-                print "     [+] ",value, ASN1Parser(self.subject).getChild(1).getChild(0).getChild(1).value
-
-        #field 3
-        field3 = ASN1Parser(self.subject).getChild(2).getChild(0).getChild(0)
-        oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
-        oid_str = get_oid_str(oid)
-        for key,value in OIDMap.oid_map.iteritems():
-            if key == oid_str:
-                print "     [+] ",value, ASN1Parser(self.subject).getChild(2).getChild(0).getChild(1).value
-        """
 
         #Get the subjectPublicKeyInfo
         # sequence -> sequence -> object_identifier

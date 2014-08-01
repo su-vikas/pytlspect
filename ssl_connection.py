@@ -284,12 +284,14 @@ class SSLConnection:
             #  HACK get certificate
             certificate = self._readRecordLayer(self.clientSocket, "Certificate")
             self.clientSocket.close()
+            for x in certificate.certChain.x509List:
+                x.print_cert()
 
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
-
-        for x in certificate.certChain.x509List:
-            x.print_cert()
+        except:
+            #TODO Problem in parsing certain sites, like facebook.com
+            print "[!] Error in fetching certificate, try again later"
 
     def getIP(self):
         addr = socket.gethostbyname(self.host)
@@ -338,7 +340,6 @@ def certificateTest(host, version):
     connection_obj = SSLConnection(host,version,443,5.0)
     print "[*] CERTIFICATE CHAIN"
     connection_obj.scanCertificates(host, version)
-
 
 def main(argv):
     if len(argv) == 1:

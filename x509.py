@@ -52,10 +52,11 @@ class X509(object):
         self.version = None
         self.serial_number = None
         self.signature_algorithm = None
-        self.issuer = None
+        self.issuer = {}
         self.validFrom = None
         self.validityUntil = None
-        self.subject = None
+        self.subject = {}
+        self.algorithm_identifier = None
         self.pub_key_info = None
 
     def parse(self, s):
@@ -93,7 +94,7 @@ class X509(object):
 
         # serial number of certificate
         self.serial_number = ASN1Parser(tbsCertificateP.getChildBytes(1))
-        print "[+] Serial number: 0x"+b2a_hex(self.serial_number.value)
+        #print "[+] Serial number: 0x"+b2a_hex(self.serial_number.value)
 
         #TODO signature algorithm, not workign yet
         sign_algo = ASN1Parser(ASN1Parser(tbsCertificateP.getChildBytes(2)).getChildBytes(0))
@@ -101,24 +102,24 @@ class X509(object):
         oid = self.ObjectIdentifierDecoder(sign_algo.value, sign_algo.length)
         oid_str = get_oid_str(oid)
 
-        self.signature_algorithm = oid_str
+        signature_algorithm = oid_str
 
         for key,value in OIDMap.oid_map.iteritems():
             if key == oid_str:
-                print "[+] Signature ALgorithm: ", value
+                self.signature_algorithm = (oid_str, value)
+                #print "[+] Signature ALgorithm: ", value
 
         #get the issuer
-        self.issuer = tbsCertificateP.getChildBytes(3)
-        print "[+] issuer"
+        issuer = tbsCertificateP.getChildBytes(3)
         counter = 0
         while 1:
             try:
-                field3 = ASN1Parser(self.issuer).getChild(counter).getChild(0).getChild(0)
+                field3 = ASN1Parser(issuer).getChild(counter).getChild(0).getChild(0)
                 oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
                 oid_str = get_oid_str(oid)
                 for key,value in OIDMap.oid_map.iteritems():
                     if key == oid_str:
-                        print "     [+] ",value,":", ASN1Parser(self.issuer).getChild(counter).getChild(0).getChild(1).value
+                        self.issuer[value] = ASN1Parser(issuer).getChild(counter).getChild(0).getChild(1).value
                 counter +=1
             except:
                 break
@@ -127,26 +128,23 @@ class X509(object):
         #get the validity
         self.validFrom = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(0)
         self.validFrom = self.validFrom.value[:6]
-        print "[+] valid from:" , self.validFrom
 
         self.validUntil = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(1)
         self.validUntil = self.validUntil.value[:6]
-        print "[+] Valid until: ", self.validUntil
 
         #Get the subject
-        self.subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
-        # get one level in
         # CANT HANDLE IF ANYTHING CHANGES.  HACKING TO PARSE CERT
-        print "[+] Subject:"
+        subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
         counter = 0
         while 1:
             try:
-                field3 = ASN1Parser(self.subject).getChild(counter).getChild(0).getChild(0)
+                field3 = ASN1Parser(subject).getChild(counter).getChild(0).getChild(0)
                 oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
                 oid_str = get_oid_str(oid)
                 for key,value in OIDMap.oid_map.iteritems():
                     if key == oid_str:
-                        print "     [+] ",value,":", ASN1Parser(self.subject).getChild(counter).getChild(0).getChild(1).value
+                        self.subject[value] = ASN1Parser(subject).getChild(counter).getChild(0).getChild(1).value
+                        #print "     [+] ",value,":", ASN1Parser(self.subject).getChild(counter).getChild(0).getChild(1).value
                 counter +=1
             except:
                 break
@@ -160,7 +158,8 @@ class X509(object):
 
         for key,value in OIDMap.oid_map.iteritems():
             if key == rsaOID_str:
-                print "[+] Algorithm: ", value
+                self.algorithm_identifier = (rsaOID_str, value)
+                #print "[+] Algorithm: ", value
 
         #Get the subjectPublicKey
         subjectPublicKeyP = subjectPublicKeyInfoP.getChild(1)
@@ -180,7 +179,9 @@ class X509(object):
 
         #Create a public key instance
         self.publicKey = _createPublicRSAKey(n, e)
-        print "[+] Key Size: ",len(self.publicKey) ,"\n"
+        #print "[+] Key Size: ",len(self.publicKey) ,"\n"
+
+        self.print_cert()
 
     def getFingerprint(self):
         """Get the hex-encoded fingerprint of this certificate.
@@ -230,6 +231,25 @@ class X509(object):
                 # page 7
                 print "error, panga"
         return oid
+
+    def print_cert(self):
+        print "[+] Serial Number: 0x"+b2a_hex(self.serial_number.value)
+        print "[+] Signature Algorithm: ", self.signature_algorithm[1]
+        print "[+] Issuer"
+        for key,value in self.issuer.iteritems():
+            print "     [+] "+key+": "+ str(value)
+
+        print "[+] valid from:" , self.validFrom
+        print "[+] Valid until: ", self.validUntil
+
+        print "[+] Subject:"
+        for key, value in self.issuer.iteritems():
+            print "     [+] "+key+": "+ value
+
+        print "[+] Algorithm Identifier: ", self.algorithm_identifier[1]
+        print "[+] Key Size: ", len(self.publicKey)
+        print "[+] SHA1 Fingerprint: ", self.getFingerprint()
+        print "\n"
 
 def get_oid_str(oid_tuple):
     oid_str = ""

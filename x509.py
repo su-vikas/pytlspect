@@ -181,7 +181,6 @@ class X509(object):
         self.publicKey = _createPublicRSAKey(n, e)
         #print "[+] Key Size: ",len(self.publicKey) ,"\n"
 
-        self.print_cert()
 
     def getFingerprint(self):
         """Get the hex-encoded fingerprint of this certificate.
@@ -239,8 +238,8 @@ class X509(object):
         for key,value in self.issuer.iteritems():
             print "     [+] "+key+": "+ str(value)
 
-        print "[+] valid from:" , self.validFrom
-        print "[+] Valid until: ", self.validUntil
+        print "[+] Valid From:" , self.validFrom
+        print "[+] Valid Until: ", self.validUntil
 
         print "[+] Subject:"
         for key, value in self.issuer.iteritems():
@@ -260,17 +259,3 @@ def get_oid_str(oid_tuple):
     oid_str = oid_str[0:oid_str_len]
 
     return oid_str
-
-def parse_rdnsequence(p):
-    relative_distinguished_name = ASN1Parser(p).getChildBytes(0)
-    parse_attribute_value_assertion(relative_distinguished_name)
-    #print list(relative_distinguished_name)
-
-def parse_attribute_value_assertion(p):
-    attribute_value_assertion = ASN1Parser(p).getChildBytes(0)
-    attribute_type = ASN1Parser(attribute_value_assertion).getChildBytes(0)
-
-    print "value assertion", list(attribute_value_assertion)
-
-
-

@@ -154,6 +154,8 @@ class SSLConnection:
 
                 b = b[1:]
                 certificate = Certificate(CertificateType.x509).parse(Parser(b))
+                return certificate
+                #return certificate
                 #print "certtype",len(certificate.certChain.x509List)
                 #for x in certificate.certChain.x509List:
                 #    print x.subject
@@ -277,18 +279,22 @@ class SSLConnection:
         self._doPreHandshake()
         try:
             self.clientSocket.send(pkt)
+            # TODO HACK, get server hello
             self._readRecordLayer(self.clientSocket, "Certificate")
-            self._readRecordLayer(self.clientSocket, "Certificate")
+            #  HACK get certificate
+            certificate = self._readRecordLayer(self.clientSocket, "Certificate")
             self.clientSocket.close()
+
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
+
+        for x in certificate.certChain.x509List:
+            x.print_cert()
 
     def getIP(self):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
         print self.ip
-
-
 
 def cipherTest(host, version):
     conn = SSLConnection(host,version,443,5.0)
@@ -330,6 +336,7 @@ def cipherTest(host, version):
 def certificateTest(host, version):
     version=(3,2)
     connection_obj = SSLConnection(host,version,443,5.0)
+    print "[*] CERTIFICATE CHAIN"
     connection_obj.scanCertificates(host, version)
 
 
@@ -340,7 +347,6 @@ def main(argv):
         host = argv[1].strip()
         version = (3,2)
         cipherTest(host, version)
-        time.sleep(2)
         certificateTest(host, version)
 
 if __name__ == "__main__":

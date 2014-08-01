@@ -106,7 +106,7 @@ class SSLConnection:
                             #print "Got an alert"
                             return
                     else:
-                        print "[!] unknown ssl recor layer"
+                        print "[!] unknown ssl record layer"
                 elif len(b) == recordHeaderLength:
                     break
 

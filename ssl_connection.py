@@ -366,7 +366,7 @@ def main(argv):
         host = argv[1].strip()
         version = (3,2)
         #tls_config = cipherTest(host, version)
-        #cipherTest(host, version)
+        cipherTest(host, version)
         cert = certificateTest(host, version)
         #db_manager = DBManager()
         #db_manager.insert_scan_result(tls_config, cert)

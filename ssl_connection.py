@@ -117,6 +117,7 @@ class SSLConnection:
 
             except socket.error, msg:
                 print "[!] Error in reading from socket because %s" %msg
+                break
 
         #parse the record layer
         recordLayer = RecordHeader3().parse(Parser(b))
@@ -297,7 +298,6 @@ class SSLConnection:
             print "[!] Error in fetching certificate, try again later" , msg
             return None
 
-
     def getIP(self):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
@@ -359,6 +359,7 @@ def main(argv):
         host = argv[1].strip()
         version = (3,2)
         #tls_config = cipherTest(host, version)
+        #cipherTest(host, version)
         cert = certificateTest(host, version)
         #db_manager = DBManager()
         #db_manager.insert_scan_result(tls_config, cert)

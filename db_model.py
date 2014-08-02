@@ -3,7 +3,7 @@ import peewee as pw
 
 DATABASE = "TLSScanning"
 
-myDB = pw.MySQLDatabase(DATABASE, host="192.168.10.145", port= "3479", user="", password="")
+myDB = pw.MySQLDatabase(DATABASE, host="192.168.10.145", port= "3479", user="root", password="fedora")
 
 # define a base model calss that specifies which database to use. Then, any subclasses
 # will automatically use the correct DB.
@@ -18,8 +18,8 @@ class TLSScan(BaseModel):
     app_id = IntegerField(null=False)                       # application id from app info db
     tls_supported = BooleanField(null=False)                # whether the site is tls/ssl enabled
     cert_number = IntegerField()                            # number of certificates in the chain
-    tls_config_id = ForeignField(TLSConfiguration)          # link to TLS configuration table
-    cert_chain_id = ForeignField(CertificateChain)          # link the certificate configuration table
+    tls_config_id = ForeignKeyField(TLSConfiguration)          # link to TLS configuration table
+    cert_chain_id = ForeignKeyField(CertificateChain)          # link the certificate configuration table
     time_scanned = DateTimeField(default = datetime.datetime.now, null=False) # time of scanning
 
 
@@ -43,7 +43,7 @@ class CertificateConfiguration(BaseModel):
     key_algorithm = CharField()                             # algorithm of the key
     issuer = CharField()                                    # issuer of the certificate
     sha1_fingerprint = CharField()                          # sha1 fingerprint of the certificate
-    cert_chain_id = ForeignField(CertificateChain)
+    cert_chain_id = ForeignKeyField(CertificateChain)
 
 # many-to-many relationship for certificates contained in the cert chain
 class CertificateChain(BaseModel):

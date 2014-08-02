@@ -9,7 +9,7 @@ from operator import itemgetter
 import socket,binascii, sys
 import time
 import copy
-from db_manager import DBManager
+#from db_manager import DBManager
 from tls_config import TLSConfig
 
 from messages import *
@@ -285,15 +285,16 @@ class SSLConnection:
             #  HACK get certificate
             certificate = self._readRecordLayer(self.clientSocket, "Certificate")
             self.clientSocket.close()
+            for x in certificate.certChain.x509List:
+                 x.print_cert()
 
             return certificate
 
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
             return None
-        except:
-            #TODO Problem in parsing certain sites, like facebook.com
-            print "[!] Error in fetching certificate, try again later"
+        except Exception,msg:
+            print "[!] Error in fetching certificate, try again later" , msg
             return None
 
 
@@ -357,10 +358,10 @@ def main(argv):
     else:
         host = argv[1].strip()
         version = (3,2)
-        tls_config = cipherTest(host, version)
+        #tls_config = cipherTest(host, version)
         cert = certificateTest(host, version)
-        db_manager = DBManager()
-        db_manager.insert_scan_result(tls_config, cert)
+        #db_manager = DBManager()
+        #db_manager.insert_scan_result(tls_config, cert)
 
 if __name__ == "__main__":
     main(sys.argv)

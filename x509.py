@@ -57,7 +57,9 @@ class X509(object):
         self.validityUntil = None
         self.subject = {}
         self.algorithm_identifier = None
+        self.key_algorithm = None
         self.pub_key_info = None
+        self.key_size = None
 
     def parse(self, s):
         """Parse a PEM-encoded X.509 certificate.
@@ -153,33 +155,51 @@ class X509(object):
         # sequence -> sequence -> object_identifier
         subjectPublicKeyInfoP = tbsCertificateP.getChild(subjectPublicKeyInfoIndex)
         algorithmP = ASN1Parser(subjectPublicKeyInfoP.getChildBytes(0)).getChild(0)
-        rsaOID = self.ObjectIdentifierDecoder(algorithmP.value, algorithmP.length)
-        rsaOID_str = get_oid_str(rsaOID)
+        algoOID = self.ObjectIdentifierDecoder(algorithmP.value, algorithmP.length)
+        algoOID_str = get_oid_str(algoOID)
+        #print rsaOID_str
 
         for key,value in OIDMap.oid_map.iteritems():
-            if key == rsaOID_str:
-                self.algorithm_identifier = (rsaOID_str, value)
-                #print "[+] Algorithm: ", value
+            if key == algoOID_str:
+                self.key_algorithm = (algoOID_str, value)
 
         #Get the subjectPublicKey
         subjectPublicKeyP = subjectPublicKeyInfoP.getChild(1)
 
         #Adjust for BIT STRING encapsulation
-        if (subjectPublicKeyP.value[0] !=0):
-            raise SyntaxError()
-        subjectPublicKeyP = ASN1Parser(subjectPublicKeyP.value[1:])
+        if self.key_algorithm[1] == 'RSA' :
+            if (subjectPublicKeyP.value[0] !=0):
+                raise SyntaxError()
+            subjectPublicKeyP = ASN1Parser(subjectPublicKeyP.value[1:])
 
-        #Get the modulus and exponent
-        modulusP = subjectPublicKeyP.getChild(0)
-        publicExponentP = subjectPublicKeyP.getChild(1)
+            #Get the modulus and exponent
+            modulusP = subjectPublicKeyP.getChild(0)
+            publicExponentP = subjectPublicKeyP.getChild(1)
 
-        #Decode them into numbers
-        n = bytesToNumber(modulusP.value)
-        e = bytesToNumber(publicExponentP.value)
+            #Decode them into numbers
+            n = bytesToNumber(modulusP.value)
+            e = bytesToNumber(publicExponentP.value)
 
-        #Create a public key instance
-        self.publicKey = _createPublicRSAKey(n, e)
-        #print "[+] Key Size: ",len(self.publicKey) ,"\n"
+            #Create a public key instance
+            self.publicKey = _createPublicRSAKey(n, e)
+            self.key_size = len(self.publicKey)
+            #print "[+] Key Size: ",len(self.publicKey) ,"\n"
+
+        #TODO calculate EC KEY SIZE
+        # helped in solving this issue :https://crypto.stackexchange.com/questions/6843/how-do-i-unpack-the-x-and-y-values-from-the-bitstring-in-a-der-ecdsa-public-key
+        if self.key_algorithm[1] == 'EC':
+            if (subjectPublicKeyP.value[0] !=0):
+                raise SyntaxError()
+
+            #uncompressed key, then the following bytes are x and y
+            if (subjectPublicKeyP.value[1] ==0x04):
+                key_len_byte = len(subjectPublicKeyP.value[2:])
+                self.key_size = (key_len_byte/2 )  * 8
+
+            # TODO not sure, probably correct implementation: https://stackoverflow.com/questions/16576434/cryptopp-compressed-ec-keys
+            if (subjectPublicKeyP.value[1] ==0x03) or (subjectPublicKeyP.value[1] ==0x02) :
+                key_len_byte = len(subjectPublicKeyP.value[2:])
+                self.key_size = (key_len_byte)  * 8
 
 
     def getFingerprint(self):
@@ -242,11 +262,10 @@ class X509(object):
         print "[+] Valid Until: ", self.validUntil
 
         print "[+] Subject:"
-        for key, value in self.issuer.iteritems():
+        for key, value in self.subject.iteritems():
             print "     [+] "+key+": "+ value
 
-        print "[+] Algorithm Identifier: ", self.algorithm_identifier[1]
-        print "[+] Key Size: ", len(self.publicKey)
+        print "[+] Key Size: " + self.key_algorithm[1] + " "+ str(self.key_size) + " bits"
         print "[+] SHA1 Fingerprint: ", self.getFingerprint()
         print "\n"
 

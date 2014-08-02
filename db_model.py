@@ -3,37 +3,46 @@ import peewee as pw
 
 myDB = pw.MySQLDatabase("mydb", host=" ", port= "", user=" ", password=" ")
 
-class ProtocolConfiguration(Model):
-    ssl_id = IntegerField(primary_key = True)
-    domain = CharField()
-    protocol_version = CharField()
-    ciphersuites = CharField()
-    compression = CharField()
-    time_scanned = DateTimeField()
-    certificate_chain_id  = ForeignKeyField()
-
+# define a base model calss that specifies which database to use. Then, any subclasses
+# will automatically use the correct DB.
+class BaseModel(Model):
     class Meta:
         database = myDB
 
-class CertificateConfiguration(Model):
-    cert_id  = IntegerField(primary_key  = True)
-    serial_number = CharField()
-    signature_algorithm = CharField()
-    common_name = CharField()
-    alternative_name = CharField()
-    valid_from = DateTimeField()
-    valid_until = DateTimeField()
-    key_size = CharField()
-    key_algorithm = CharField()
-    issuer = CharField()
-    sha1_fingerprint = CharField()
+class TLSScan(BaseModel):
+    tls_scan_id = IntegerField(primary_key=True)  # id for this table
+    domain = CharField(null=False)                # domain of the application scanned against
+    app_id = IntegerField(null=False)             # application id from app info db
+    tls_supported = BooleanField(null=False)      # whether the site is tls/ssl enabled
+    cert_number = IntegerField()                  # number of certificates in the chain
+    tls_config_id = ForeignField(TLSConfiguration)# link to TLS configuration table
+    cert_chain_id = ForeignField(CertificateChain)# link the certificate configuration table
+    time_scanned = DateTimeField(default = datetime.datetime.now, null=False) # time of scanning
 
-    class Meta:
-        database = myDB
 
-class CertificateChain(Model):
-    cert_chain_number = IntegerField()
-    cert_chain = CharField() #
-    certificate_chain_id = ForeignKeyField()
+class TLSConfiguration(BaseModel):
+    tls_config_id = IntegerField(primary_key = True)        # id for this table
+    protocol_version = CharField()                          # TLS version supported
+    ciphersuites = CharField()                              # ciphersuites supported by this website
+    compression = CharField()                               # which all compression method are supported.
+
+class CertificateConfiguration(BaseModel):
+    cert_id  = IntegerField(primary_key  = True)            # id for this table
+    serial_number = CharField()                             # certificate's serial number
+    signature_algorithm = CharField()                       # signature algorithm
+    common_name = CharField()                               # common name for the certificate
+    alternative_name = CharField()                          # alternative name extracted from the alt_name x509 extension
+    valid_from = DateTimeField()                            # valid from
+    valid_until = DateTimeField()                           # valid until
+    key_size = CharField()                                  # size of the public key advertised
+    key_algorithm = CharField()                             # algorithm of the key
+    issuer = CharField()                                    # issuer of the certificate
+    sha1_fingerprint = CharField()                          # sha1 fingerprint of the certificate
+    cert_chain_id = ForeignField(CertificateChain)
+
+# many-to-many relationship for certificates contained in the cert chain
+class CertificateChain(BaseModel):
+    cert_chain_id = IntegerField()                          # id of the certificate chain
+    cert_id = ForeignKeyField(CertificateConfiguration)     # certificate id present in this chain
 
 

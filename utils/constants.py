@@ -124,6 +124,9 @@ class OIDMap:
            "1.2.840.113549.1.1.11" : "SHA256withRSA",
            "1.2.840.10040.4.1" : "DSA",
            "1.2.840.10040.4.3" : "SHA1withDSA",
+           "1.2.840.10045.4.1" : "SHA1withECDSA",
+           "1.2.840.10045.2.1" : "EC",
+
 
            "2.5.4.6" : "id-at-countryName",
            "2.5.4.8": "id-at-stateorProvinceName",

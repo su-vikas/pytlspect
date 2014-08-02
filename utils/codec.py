@@ -33,6 +33,9 @@ class Parser(object):
 
     def get(self, length):
         if self.index + length > len(self.bytes):
+            #print self.index, length, len(self.bytes)
+            #print b2a_hex(self.bytes)
+            #self.index = 0
             raise SyntaxError()
         x = 0
         for count in range(length):

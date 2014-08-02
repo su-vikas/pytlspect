@@ -1,4 +1,5 @@
 *- handle case when server hello and certificate come in same packet
+*- crashing for 4shared.com
 - some superflous files for x509 parsing. keyfactory.py pem.py pycrypto_rsakey.py python_rsakey.py rsakey.py tackwrapper.py
 - Error in parsing certs for certain sites like facebook.com. Also, sometime for working site also get an exception
 - fetching certificate packet is kind of hack. Make it more elegant 

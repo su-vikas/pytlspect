@@ -136,19 +136,19 @@ class X509(object):
 
         #Get the subject
         # CANT HANDLE IF ANYTHING CHANGES.  HACKING TO PARSE CERT
-        subject = tbsCertificateP.getChildBytes(subjectPublicKeyInfoIndex - 1)
+        subject = tbsCertificateP.getChild(subjectPublicKeyInfoIndex - 1)
         counter = 0
         while 1:
             try:
-                field3 = ASN1Parser(subject).getChild(counter).getChild(0).getChild(0)
+                field3 = subject.getChild(counter).getChild(0).getChild(0)
                 oid = self.ObjectIdentifierDecoder(field3.value, field3.length)
                 oid_str = get_oid_str(oid)
                 for key,value in OIDMap.oid_map.iteritems():
                     if key == oid_str:
-                        self.subject[value] = ASN1Parser(subject).getChild(counter).getChild(0).getChild(1).value
-                        #print "     [+] ",value,":", ASN1Parser(self.subject).getChild(counter).getChild(0).getChild(1).value
+                        self.subject[value] = subject.getChild(counter).getChild(0).getChild(1).value
+                        #print "     [+] ",value,":",subject.getChild(counter).getChild(0).getChild(1).value
                 counter +=1
-            except:
+            except Exception:
                 break
 
         #Get the subjectPublicKeyInfo

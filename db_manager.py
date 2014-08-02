@@ -1,12 +1,13 @@
 from db_model import TLSScan,TLSConfiguration,CertificateConfiguration,CertificateChain
+from db_model import *
 
 class DBManager:
 
     def create_tables(self):
-        TLSScan.create_table()
         TLSConfiguration.create_table()
         CertificateConfiguration.create_table()
         CertificateChain.create_table()
+        TLSScan.create_table()
 
 
 

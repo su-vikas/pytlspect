@@ -184,16 +184,18 @@ class SSLConnection:
             } ClientHello;
 
         """
-        self._doPreHandshake()
-        pkt = _clientHelloPacket(version)
-
         try:
+            self._doPreHandshake()
+            pkt = _clientHelloPacket(version)
+
             self.clientSocket.send(pkt)
 
         except socket.error, msg:
             #TODO handle errors for timeout
             print "[!] Could not connect to target host because %s" %msg
             #TODO return or exit or escalate the exception
+        except socket.gaierror, msg:
+            print "[!] Check whether website exists. Error:%s" %msg
 
     def enumerateCiphers(self,version):
         cipherSuitesDetected = []
@@ -278,8 +280,8 @@ class SSLConnection:
         #print len(ciphersuite)
         #version = (3,2)
         pkt = self._clientHelloPacket(version, ciphersuite)
-        self._doPreHandshake()
         try:
+            self._doPreHandshake()
             self.clientSocket.send(pkt)
             # TODO HACK, get server hello
             self._readRecordLayer(self.clientSocket, "Certificate")
@@ -291,22 +293,26 @@ class SSLConnection:
 
             return certificate
 
+        except socket.gaierror, msg:
+            print "[!] Check whether website exists. Error:%s" %msg
+
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
             return None
-        except Exception,msg:
-            print "[!] Error in fetching certificate, try again later" , msg
+        except SyntaxError:
+            print "[!] Error in fetching certificate, try again later"
             return None
 
     def getIP(self):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
-        print self.ip
+        return self.ip
 
 def cipherTest(host, version):
     conn = SSLConnection(host,version,443,5.0)
     #Resolve the IP
-    print "SCAN RESULTS FOR HOST:",host," IP:", conn.getIP(), " \n"
+    print "[+] HOST:",host
+    print "[+] IP:", conn.getIP(), " \n"
 
     sslVersions = conn.enumerateSSLVersions()
     print "\n[+] SSL VERSIONS SUPPORTED:"
@@ -337,6 +343,7 @@ def cipherTest(host, version):
         else:
             print "\n[+] COMPRESSION SUPPORT: Yes"
 
+    print " \n "
     tls_config = TLSConfig(domain = host,ip= conn.getIP(), tls_versions = sslVersions, ciphersuites = cipherSuitesDetected, compression = compression)
 
     return tls_config

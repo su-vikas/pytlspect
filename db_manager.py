@@ -20,29 +20,37 @@ class DBManager:
        CertificateChain.create(cert_chain_id = 1, cert_id = obj)
 
     def insert_scan_result(self, TLSConfig, X509CertChain):
-        ver = " "
+        ver = ""
         for v in TLSConfig.tls_versions:
-            if v is (2,0):
+            if v == (2,0):
                 ver = ver + "2.0"
-            elif v is (3,0):
+            elif v == (3,0):
                 ver = ver + "3.0"
-            elif v is (3,1):
+            elif v == (3,1):
                 ver = ver + "3.1"
-            elif v is (3,2):
+            elif v == (3,2):
                 ver = ver + "3.2"
-            elif v is (3,3):
+            elif v == (3,3):
                 ver = ver + "3.3"
 
             ver = ver + ","
 
-        print ver
+        ciphers = ""
+        for cipher_id in TLSConfig.ciphersuites:
+            ciphers = ciphers + str(cipher_id) + ","
+        print ciphers
 
-        #tlsconfig = TLSConfiguration.create(protocol_version=ver
+        if TLSConfig.compression == 0:
+            compression = False
+        else:
+            compression = True
+
+        tlsconfig = TLSConfiguration.create(protocol_version=ver, ciphersuites=ciphers, compression=compression)
 
 def main():
     mang = DBManager()
     #mang.create_tables()
-    mang.test_insert()
+    #mang.test_insert()
 
 if __name__ == "__main__":
     main()

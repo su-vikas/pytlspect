@@ -17,7 +17,7 @@ class TLSConfiguration(BaseModel):
     tls_config_id = PrimaryKeyField()
     protocol_version = CharField()                          # TLS version supported
     ciphersuites = CharField()                              # ciphersuites supported by this website
-    compression = CharField()                               # which all compression method are supported.
+    compression = BooleanField()                               # which all compression method are supported.
 
 # contains x509 certificate related information
 class CertificateConfiguration(BaseModel):

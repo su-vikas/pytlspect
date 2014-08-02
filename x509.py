@@ -167,7 +167,6 @@ class X509(object):
 
         #Adjust for BIT STRING encapsulation
         if self.key_algorithm is not None and self.key_algorithm[1] == 'RSA':
-            print self.key_algorithm
             if (subjectPublicKeyP.value[0] !=0):
                 raise SyntaxError()
             subjectPublicKeyP = ASN1Parser(subjectPublicKeyP.value[1:])
@@ -190,7 +189,6 @@ class X509(object):
         #TODO calculate EC KEY SIZE
         # helped in solving this issue :https://crypto.stackexchange.com/questions/6843/how-do-i-unpack-the-x-and-y-values-from-the-bitstring-in-a-der-ecdsa-public-key
         if self.key_algorithm is not None and self.key_algorithm[1] == 'EC':
-            print self.key_algorithm
             if (subjectPublicKeyP.value[0] !=0):
                 raise SyntaxError()
 

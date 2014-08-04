@@ -107,9 +107,11 @@ class ClientHello(HandshakeMsg):
         self.tack = False               # TLS key pinning for everyone http://lwn.net/Articles/499134/
         self.supports_npn = False
         self.server_name = bytearray(0) # for Server Name Indication (SNI)
+        self.renegotiation_info = False
+        self.heartbeat = False
 
     def create(self, version, random, session_id, cipher_suites, certificate_types = None, srpUsername=None,
-                tack=False, supports_npn=False, serverName=None):
+                tack=False, supports_npn=False, serverName=None, renegotiation_info = False, heartbeat = False):
         self.client_version = version
         self.random = random
         self.session_id = session_id   #THis field should be empty if no session_id is available or the client wishes to generate new security parameters
@@ -121,8 +123,11 @@ class ClientHello(HandshakeMsg):
 
         self.tack = tack
         self.supports_npn = supports_npn
+        self.renegotiation_info = renegotiation_info
+        self.heartbeat = heartbeat
         if serverName:
             self.server_name = bytearray(serverName, "utf-8")
+
         return self
 
     def write(self):
@@ -146,10 +151,14 @@ class ClientHello(HandshakeMsg):
             w2.add(len(self.srp_username)+1, 2)
             w2.addVarSeq(self.srp_username, 1, 1)
 
+        # ----- EXTENSIONS -------
+        # Next protocol Negotiation
+
         if self.supports_npn:
             w2.add(ExtensionType.supports_npn, 2)
             w2.add(0, 2)
 
+        # SNI
         if self.server_name:
             w2.add(ExtensionType.server_name, 2)
             w2.add(len(self.server_name)+5, 2)
@@ -157,9 +166,25 @@ class ClientHello(HandshakeMsg):
             w2.add(NameType.host_name, 1)
             w2.addVarSeq(self.server_name, 1, 2)
 
+        # Trust Assertions for Certificate Keys: TACK http://tack.io/draft.html
         if self.tack:
             w2.add(ExtensionType.tack, 2)
             w2.add(0, 2)
+
+        # renegotiation info
+        # the data is hardcoded. ff 01 00 01 00 .
+        # 1st and 2nd for extension type. 3rd and 4th the length of extension data.
+        if self.renegotiation_info:
+            w2.add(ExtensionType.renegotiation_info,2)
+            w2.add(0,2)
+            w2.add(0,1)
+
+        # heartbeat
+        # send heartbeat hello message, with peer_allowed_to_send. http://tools.ietf.org/html/rfc6520#page-2
+        if self.heartbeat:
+            w2.add(ExtensionType.heartbeat, 2)
+            w2.add(1, 2)
+            w2.add(1, 1)  #peer_allowed_to_send
 
         if len(w2.bytes):
             w.add(len(w2.bytes), 2)
@@ -196,7 +221,8 @@ class ServerHello(HandshakeMsg):
         self.next_protos_advertised = None
         self.next_protos = None
         self.server_name = False
-
+        self.renegotiation_info = False
+        self.heartbeat = False
 
     def create(self, version, random, session_id, cipher_suite, certificate_type, tackExt, next_protos_advertised):
         self.server_version = version
@@ -234,6 +260,13 @@ class ServerHello(HandshakeMsg):
                     self.next_protos = self.__parse_next_protos(p.getFixBytes(extLength))
                 elif extType == ExtensionType.server_name:
                     self.server_name = True
+                    p.getFixBytes(extLength)
+                elif extType == ExtensionType.renegotiation_info:
+                    self.renegotiation_info = True
+                    p.getFixBytes(extLength)
+                elif extType == ExtensionType.heartbeat:
+                    self.heartbeat = True
+                    p.getFixBytes(extLength)
                 else:
                     p.getFixBytes(extLength)
                 soFar += 4 + extLength

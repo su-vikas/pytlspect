@@ -79,7 +79,7 @@ class SSLConnection:
         if ciphersuite is None:
             ciphersuite =copy.copy(CipherSuite.all_suites)
 
-        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True)
+        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True, heartbeat = True)
 
         p = bytearray()
         p = cHello.write()
@@ -322,6 +322,10 @@ class SSLConnection:
                     print "[+] SNI Supported"
                 if server_hello.tackExt:
                     print "[+] Tack supported"
+                if server_hello.renegotiation_info:
+                    print "[+] Renegotiation supported"
+                if server_hello.heartbeat:
+                    print "[+] Heartbeat supported"
 
 
         except socket.gaierror, msg:

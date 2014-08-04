@@ -125,7 +125,6 @@ class ClientHello(HandshakeMsg):
             self.server_name = bytearray(serverName, "utf-8")
         return self
 
-#TODO parse not included
     def write(self):
         w = Writer()
         w.add(self.client_version[0], 1)
@@ -167,8 +166,6 @@ class ClientHello(HandshakeMsg):
             w.bytes += w2.bytes
         return self.postWrite(w)
 
-
-
 """
 RFC 5246 pg 41
 struct {
@@ -186,8 +183,6 @@ struct {
       } ServerHello;
 """
 
-
-
 class ServerHello(HandshakeMsg):
     def __init__(self):
         HandshakeMsg.__init__(self, HandshakeType.server_hello)
@@ -200,6 +195,7 @@ class ServerHello(HandshakeMsg):
         self.tackExt = None
         self.next_protos_advertised = None
         self.next_protos = None
+        self.server_name = False
 
 
     def create(self, version, random, session_id, cipher_suite, certificate_type, tackExt, next_protos_advertised):
@@ -236,6 +232,8 @@ class ServerHello(HandshakeMsg):
                     self.tackExt = TackExtension(p.getFixBytes(extLength))
                 elif extType == ExtensionType.supports_npn:
                     self.next_protos = self.__parse_next_protos(p.getFixBytes(extLength))
+                elif extType == ExtensionType.server_name:
+                    print "[+] SNI supported"
                 else:
                     p.getFixBytes(extLength)
                 soFar += 4 + extLength

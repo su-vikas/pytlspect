@@ -68,7 +68,6 @@ class SSLConnection:
         self.timeout = timeout
         self.ip = None
 
-
     def _doPreHandshake(self):
         self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.clientSocket.connect((self.host, self.port))
@@ -80,7 +79,8 @@ class SSLConnection:
         if ciphersuite is None:
             ciphersuite =copy.copy(CipherSuite.all_suites)
 
-        cHello.create(version, getRandomBytes(32), session, ciphersuite)
+        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True)
+
         p = bytearray()
         p = cHello.write()
         recordHeader = RecordHeader3().create(version, ContentType.handshake, len(p))
@@ -335,6 +335,7 @@ def cipherTest(host, version):
             print "     "+CipherSuite.cipher_suites[cipher_id]['name']
 
     compression = conn.isCompressionSupported()
+
     if compression is None:
         print "[-] Error in getting compression value"
     else:
@@ -344,9 +345,9 @@ def cipherTest(host, version):
             print "\n[+] COMPRESSION SUPPORT: Yes"
 
     print " \n "
-    tls_config = TLSConfig(domain = host,ip= conn.getIP(), tls_versions = sslVersions, ciphersuites = cipherSuitesDetected, compression = compression)
+    #tls_config = TLSConfig(domain = host,ip= conn.getIP(), tls_versions = sslVersions, ciphersuites = cipherSuitesDetected, compression = compression)
 
-    return tls_config
+    #return tls_config
 
 
 def certificateTest(host, version):

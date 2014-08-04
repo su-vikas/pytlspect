@@ -233,7 +233,7 @@ class ServerHello(HandshakeMsg):
                 elif extType == ExtensionType.supports_npn:
                     self.next_protos = self.__parse_next_protos(p.getFixBytes(extLength))
                 elif extType == ExtensionType.server_name:
-                    print "[+] SNI supported"
+                    self.server_name = True
                 else:
                     p.getFixBytes(extLength)
                 soFar += 4 + extLength

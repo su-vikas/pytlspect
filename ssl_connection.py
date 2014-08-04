@@ -79,15 +79,13 @@ class SSLConnection:
         if ciphersuite is None:
             ciphersuite =copy.copy(CipherSuite.all_suites)
 
-        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True)
+        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True)
 
         p = bytearray()
         p = cHello.write()
         recordHeader = RecordHeader3().create(version, ContentType.handshake, len(p))
         pkt = recordHeader.write() + p
         return pkt
-
-
 
     #@param parseUntil to stop the parsing when that information is extracted
     # parseUntil  ServerVersion, Compression
@@ -145,6 +143,7 @@ class SSLConnection:
 
                 if parseUntil is "ServerVersion": return serverHello.server_version
                 if parseUntil is "Compression": return serverHello.compression_method
+                if parseUntil is "Extensions": return serverHello
 
                 return serverHello.cipher_suite
 
@@ -274,11 +273,9 @@ class SSLConnection:
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
 
-    def scanCertificates(self,host, version):
+    def scanCertificates(self):
         cHello = ClientHello()
         ciphersuite =copy.copy(CipherSuite.all_suites)
-        #print len(ciphersuite)
-        #version = (3,2)
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:
             self._doPreHandshake()
@@ -302,6 +299,39 @@ class SSLConnection:
         except SyntaxError:
             print "[!] Error in fetching certificate, try again later"
             return None
+
+    # Check for all supported extensions
+    def supportedExtensions(self):
+        cHello = ClientHello()
+        ciphersuite =copy.copy(CipherSuite.all_suites)
+        version=(3,1)
+        pkt = self._clientHelloPacket(version, ciphersuite)
+        try:
+            self._doPreHandshake()
+            self.clientSocket.send(pkt)
+            server_hello = self._readRecordLayer(self.clientSocket, "Extensions")
+
+            if server_hello is None:
+                print "[!] Error in getting Server Hello. Try again later."
+            else:
+                if server_hello.next_protos:
+                    print "[+] Next protocol negotiation supported:", server_hello.next_protos
+                    for e in server_hello.next_protos:
+                        print "     [+]",e
+                if server_hello.server_name:
+                    print "[+] SNI Supported"
+                if server_hello.tackExt:
+                    print "[+] Tack supported"
+
+
+        except socket.gaierror, msg:
+            print "[!] Check whether website exists. Error:%s" %msg
+
+        except socket.error, msg:
+            print "[!] Could not connect to target host because %s" %msg
+            return None
+        except SyntaxError:
+            print "[!] Error in fetching certificate, try again later"
 
     def getIP(self):
         addr = socket.gethostbyname(self.host)
@@ -347,7 +377,7 @@ def cipherTest(host, version):
     print " \n "
     #tls_config = TLSConfig(domain = host,ip= conn.getIP(), tls_versions = sslVersions, ciphersuites = cipherSuitesDetected, compression = compression)
 
-    #return tls_config
+    #treturn tls_config
 
 
 def certificateTest(host, version):
@@ -355,6 +385,11 @@ def certificateTest(host, version):
     connection_obj = SSLConnection(host,version,443,5.0)
     print "[*] CERTIFICATE CHAIN"
     connection_obj.scanCertificates(host, version)
+
+def extensionTest(host, version):
+    version=(3,2)
+    connection_obj = SSLConnection(host,version,443,5.0)
+    connection_obj.supportedExtensions()
 
 
 def print_scan_result():
@@ -367,10 +402,11 @@ def main(argv):
         host = argv[1].strip()
         version = (3,2)
         #tls_config = cipherTest(host, version)
-        cipherTest(host, version)
-        cert = certificateTest(host, version)
+        #cipherTest(host, version)
+        #cert = certificateTest(host, version)
         #db_manager = DBManager()
         #db_manager.insert_scan_result(tls_config, cert)
+        extensionTest(host, version)
 
 if __name__ == "__main__":
     main(sys.argv)

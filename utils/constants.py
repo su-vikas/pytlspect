@@ -47,6 +47,8 @@ class ExtensionType:    # RFC 6066 / 4366
     supports_npn = 13172
     renegotiation_info = 0xFF01
     heartbeat = 0x000F
+    ocsp = 0x0005
+    session_ticket_tls = 0x0023
 
 class NameType:
     host_name = 0

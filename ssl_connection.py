@@ -79,7 +79,8 @@ class SSLConnection:
         if ciphersuite is None:
             ciphersuite =copy.copy(CipherSuite.all_suites)
 
-        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True, heartbeat = True)
+        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True,
+                heartbeat = True, ocsp =True, session_ticket = True)
 
         p = bytearray()
         p = cHello.write()
@@ -326,7 +327,10 @@ class SSLConnection:
                     print "[+] Renegotiation supported"
                 if server_hello.heartbeat:
                     print "[+] Heartbeat supported"
-
+                if server_hello.ocsp:
+                    print "[+] OCSP stapling supported"
+                if server_hello.session_ticket:
+                    print "[+] Session Ticket TLS supported"
 
         except socket.gaierror, msg:
             print "[!] Check whether website exists. Error:%s" %msg

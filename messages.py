@@ -107,11 +107,14 @@ class ClientHello(HandshakeMsg):
         self.tack = False               # TLS key pinning for everyone http://lwn.net/Articles/499134/
         self.supports_npn = False
         self.server_name = bytearray(0) # for Server Name Indication (SNI)
-        self.renegotiation_info = False
-        self.heartbeat = False
+        self.renegotiation_info = False # safe renegotiation
+        self.heartbeat = False          # heartbeat extension
+        self.ocsp = False               # ocsp stapling extension
+        self.session_ticket = False     # session ticket TLS extension
 
     def create(self, version, random, session_id, cipher_suites, certificate_types = None, srpUsername=None,
-                tack=False, supports_npn=False, serverName=None, renegotiation_info = False, heartbeat = False):
+                tack=False, supports_npn=False, serverName=None, renegotiation_info = False, heartbeat = False,
+                ocsp = False, session_ticket = False):
         self.client_version = version
         self.random = random
         self.session_id = session_id   #THis field should be empty if no session_id is available or the client wishes to generate new security parameters
@@ -125,6 +128,8 @@ class ClientHello(HandshakeMsg):
         self.supports_npn = supports_npn
         self.renegotiation_info = renegotiation_info
         self.heartbeat = heartbeat
+        self.ocsp = ocsp
+        self.session_ticket = session_ticket
         if serverName:
             self.server_name = bytearray(serverName, "utf-8")
 
@@ -186,6 +191,19 @@ class ClientHello(HandshakeMsg):
             w2.add(1, 2)
             w2.add(1, 1)  #peer_allowed_to_send
 
+        # OCSP stapling extension
+        if self.ocsp:
+            w2.add(ExtensionType.ocsp, 2)
+            w2.add(5, 2) # length of the extension data
+            w2.add(1, 1) # certifcate status type: OCSP
+            w2.add(0,2)  # responder ID list length: 0 and request extensions length:0
+            w2.add(0,2)  # responder ID list length: 0 and request extensions length:0
+
+        # Sesssion Ticket TLS
+        if self.session_ticket:
+            w2.add(ExtensionType.session_ticket_tls,2)
+            w2.add(0,2)  # empty session ticket
+
         if len(w2.bytes):
             w.add(len(w2.bytes), 2)
             w.bytes += w2.bytes
@@ -223,6 +241,8 @@ class ServerHello(HandshakeMsg):
         self.server_name = False
         self.renegotiation_info = False
         self.heartbeat = False
+        self.ocsp= False
+        self.session_ticket = False
 
     def create(self, version, random, session_id, cipher_suite, certificate_type, tackExt, next_protos_advertised):
         self.server_version = version
@@ -266,6 +286,12 @@ class ServerHello(HandshakeMsg):
                     p.getFixBytes(extLength)
                 elif extType == ExtensionType.heartbeat:
                     self.heartbeat = True
+                    p.getFixBytes(extLength)
+                elif extType == ExtensionType.ocsp:
+                    self.ocsp = True
+                    p.getFixBytes(extLength)
+                elif extType == ExtensionType.session_ticket_tls:
+                    self.session_ticket = True
                     p.getFixBytes(extLength)
                 else:
                     p.getFixBytes(extLength)

@@ -274,7 +274,7 @@ class SSLConnection:
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg
 
-    def scanCertificates(self):
+    def scanCertificates(self, host, version):
         cHello = ClientHello()
         ciphersuite =copy.copy(CipherSuite.all_suites)
         pkt = self._clientHelloPacket(version, ciphersuite)
@@ -315,8 +315,9 @@ class SSLConnection:
             if server_hello is None:
                 print "[!] Error in getting Server Hello. Try again later."
             else:
+                print "\n[*] TLS EXTENSIONS SUPPORTED"
                 if server_hello.next_protos:
-                    print "[+] Next protocol negotiation supported:", server_hello.next_protos
+                    print "[+] Next protocol negotiation supported:"
                     for e in server_hello.next_protos:
                         print "     [+]",e
                 if server_hello.server_name:
@@ -363,11 +364,13 @@ def cipherTest(host, version):
         print "No version detected strangely"
 
     maxSSLVersion = max(sslVersions, key=itemgetter(1))
-    #get the ciphers supported
-    cipherSuitesDetected = conn.enumerateCiphers(maxSSLVersion)
     print "\n[+] CIPHERS SUPPORTED IN DEFAULT PREFERRED ORDER:"
-    for cipher_id in cipherSuitesDetected:
-        print "     " + CipherSuite.cipher_suites[cipher_id]['name']
+    for s in sslVersions:
+        print "\n     [+] TLS Version:", s
+        #get the ciphers supported
+        cipherSuitesDetected = conn.enumerateCiphers(s)
+        for cipher_id in cipherSuitesDetected:
+            print "         " + CipherSuite.cipher_suites[cipher_id]['name']
 
     print "\n[+] LIST OF POTENTIALLY WEAK CIPHERS:"
     for cipher_id in cipherSuitesDetected:
@@ -412,8 +415,8 @@ def main(argv):
         host = argv[1].strip()
         version = (3,2)
         #tls_config = cipherTest(host, version)
-        #cipherTest(host, version)
-        #cert = certificateTest(host, version)
+        cipherTest(host, version)
+        cert = certificateTest(host, version)
         #db_manager = DBManager()
         #db_manager.insert_scan_result(tls_config, cert)
         extensionTest(host, version)

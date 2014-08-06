@@ -80,7 +80,7 @@ class SSLConnection:
             ciphersuite =copy.copy(CipherSuite.all_suites)
 
         cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True,
-                heartbeat = True, ocsp =True, session_ticket = True)
+                heartbeat = True, ocsp =True, session_ticket = True, elliptic_curves = True, ec_point_formats = True)
 
         p = bytearray()
         p = cHello.write()
@@ -331,6 +331,8 @@ class SSLConnection:
                     print "[+] OCSP stapling supported"
                 if server_hello.session_ticket:
                     print "[+] Session Ticket TLS supported"
+                if server_hello.ec_point_formats:
+                    print "[+] Ec Point formats supported"
 
         except socket.gaierror, msg:
             print "[!] Check whether website exists. Error:%s" %msg

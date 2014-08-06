@@ -49,6 +49,48 @@ class ExtensionType:    # RFC 6066 / 4366
     heartbeat = 0x000F
     ocsp = 0x0005
     session_ticket_tls = 0x0023
+    elliptic_curves = 0x000a
+    ec_point_formats = 0x000b
+
+class EllipticCurves:
+    # http://tools.ietf.org/html/rfc4492#page-11
+    sect163k1 = 0x0001
+    sect163r1 = 0x0002
+    sect163r2 = 0x0003
+    sect193r1 = 0x0004
+    sect193r2 = 0x0005
+    sect233k1 = 0x0006
+    sect233r1 = 0x0007
+    sect239k1 = 0x0008
+    sect283k1 = 0x0009
+    sect283r1 = 0x000a
+    sect409k1 = 0x000b
+    sect409r1 = 0x000c
+    sect571k1 = 0x000d
+    sect571r1 = 0x000e
+    secp160k1 = 0x000f
+    secp160r1 = 0x0010
+    secp160r2 = 0x0011
+    secp192k1 = 0x0012
+    secp192r1 = 0x0013
+    secp224k1 = 0x0014
+    secp224r1 = 0x0015
+    secp256k1 = 0x0016
+    secp256r1 = 0x0017
+    secp384r1 = 0x0018
+    secp521r1 = 0x0019
+
+
+    def get_opera_curves(self):
+        opera_curves = []
+        opera_curves.append(secp256r1)
+        opera_curves.append(secp384r1)
+        opera_curves.append(secp521r1)
+        return opera_curves
+
+    def get_all_curves(self):
+        all_curves = []
+        return all_curves
 
 class NameType:
     host_name = 0

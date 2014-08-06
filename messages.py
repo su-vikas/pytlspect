@@ -111,10 +111,12 @@ class ClientHello(HandshakeMsg):
         self.heartbeat = False          # heartbeat extension
         self.ocsp = False               # ocsp stapling extension
         self.session_ticket = False     # session ticket TLS extension
+        self.elliptic_curves = False
+        self.ec_point_formats = False
 
     def create(self, version, random, session_id, cipher_suites, certificate_types = None, srpUsername=None,
                 tack=False, supports_npn=False, serverName=None, renegotiation_info = False, heartbeat = False,
-                ocsp = False, session_ticket = False):
+                ocsp = False, session_ticket = False, elliptic_curves = False, ec_point_formats = False):
         self.client_version = version
         self.random = random
         self.session_id = session_id   #THis field should be empty if no session_id is available or the client wishes to generate new security parameters
@@ -130,6 +132,8 @@ class ClientHello(HandshakeMsg):
         self.heartbeat = heartbeat
         self.ocsp = ocsp
         self.session_ticket = session_ticket
+        self.elliptic_curves = elliptic_curves
+        self.ec_point_formats = ec_point_formats
         if serverName:
             self.server_name = bytearray(serverName, "utf-8")
 
@@ -204,6 +208,22 @@ class ClientHello(HandshakeMsg):
             w2.add(ExtensionType.session_ticket_tls,2)
             w2.add(0,2)  # empty session ticket
 
+        #TODO hard coded for opera supported curves
+        # ELLIPTIC CURVES
+        if self.elliptic_curves:
+            w2.add(ExtensionType.elliptic_curves, 2)
+            w2.add(8,2)
+            w2.add(6,2)
+            w2.add(23,2)  # secp256r1
+            w2.add(24,2)  # secp384r1
+            w2.add(25,2)  # secp521r1
+
+        if self.ec_point_formats:
+            w2.add(ExtensionType.ec_point_formats, 2)
+            w2.add(2,2)
+            w2.add(1,1)
+            w2.add(0,1)         # uncompressed is only supported
+
         if len(w2.bytes):
             w.add(len(w2.bytes), 2)
             w.bytes += w2.bytes
@@ -243,6 +263,7 @@ class ServerHello(HandshakeMsg):
         self.heartbeat = False
         self.ocsp= False
         self.session_ticket = False
+        self.ec_point_formats = False
 
     def create(self, version, random, session_id, cipher_suite, certificate_type, tackExt, next_protos_advertised):
         self.server_version = version
@@ -292,6 +313,12 @@ class ServerHello(HandshakeMsg):
                     p.getFixBytes(extLength)
                 elif extType == ExtensionType.session_ticket_tls:
                     self.session_ticket = True
+                    p.getFixBytes(extLength)
+                elif extType == ExtensionType.elliptic_curves:
+                    self.elliptic_curves = True
+                    p.getFixBytes(extLength)
+                elif extType == ExtensionType.ec_point_formats:
+                    self.ec_point_formats = True
                     p.getFixBytes(extLength)
                 else:
                     p.getFixBytes(extLength)

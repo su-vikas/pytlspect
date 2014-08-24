@@ -131,7 +131,7 @@ class SSLConnection:
             try:
                 bytes_read = sock.recv(recordLayer.length - len(b))
                 #print recordLayer.length, len(b), len(bytes_read)
-            except scoket.error, msg:
+            except socket.error, msg:
                 print "[!] Error in reading from socket because %s" %msg
 
             if len(bytes_read) == 0:

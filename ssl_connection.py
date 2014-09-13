@@ -9,6 +9,7 @@ from operator import itemgetter
 import socket,binascii, sys
 import time
 import copy
+import argparse
 #from db_manager import DBManager
 from tls_config import TLSConfig
 
@@ -411,22 +412,35 @@ def print_scan_result():
 # parse commandline args
 def parse_args():
     parser = argparse.ArgumentParser(description="Scan for various TLS configurations")
-    parser.add_argument("-h", "--host", required=True, help="The hostname to be scanned for")
+    parser.add_argument("-d", "--domain", required=True, help="The hostname to be scanned for")
     parser.add_argument("-p", "--port", help="Port number to scan at, defaults to 443")
     parser.add_argument("-a", "--all", help="Scan for all parameters")
+    parser.add_argument("-v", "--version", default=(3,2), help="Scan for all parameters")
+    args = vars(parser.parse_args())
+    host = args['domain']
+    port = args['port']
+    version = args['version']
+    all_param = args['all']
+
+    cipherTest(host,version)
+    cert = certificateTest(host, version)
+    extensionTest(host, version)
 
 def main(argv):
-    if len(argv) == 1:
-        print "[!] Give host and port \n"
-    else:
-        host = argv[1].strip()
-        version = (3,2)
-        #tls_config = cipherTest(host, version)
-        cipherTest(host, version)
-        cert = certificateTest(host, version)
-        #db_manager = DBManager()
-        #db_manager.insert_scan_result(tls_config, cert)
-        extensionTest(host, version)
+    parse_args()
+
+
+   # if len(argv) == 1:
+   #     print "[!] Give host and port \n"
+   # else:
+   #     host = argv[1].strip()
+   #     version = (3,2)
+   #     #tls_config = cipherTest(host, version)
+   #     cipherTest(host, version)
+   #     cert = certificateTest(host, version)
+   #     #db_manager = DBManager()
+   #     #db_manager.insert_scan_result(tls_config, cert)
+   #     extensionTest(host, version)
 
 if __name__ == "__main__":
     main(sys.argv)

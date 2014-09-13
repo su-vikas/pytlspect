@@ -27,7 +27,6 @@ from utils.constants import *
 from utils.cryptomath import *
 from utils.keyfactory import _createPublicRSAKey
 from utils.pem import *
-import binascii
 
 
 class X509(object):

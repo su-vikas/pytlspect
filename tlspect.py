@@ -1,11 +1,9 @@
 from utils.constants import *
 from utils.packetCreator import *
 from operator import itemgetter
-import socket,binascii, sys
-import time
+import socket, sys
 import copy
 import argparse
-from tls_config import TLSConfig
 #from db_manager import DBManager
 
 from messages import *

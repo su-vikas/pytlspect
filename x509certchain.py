@@ -3,7 +3,7 @@
 
 """Class representing an X.509 certificate chain."""
 
-from utils import cryptomath
+# from utils import cryptomath
 from utils.tackwrapper import *
 from utils.pem import *
 from x509 import X509

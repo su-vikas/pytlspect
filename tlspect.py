@@ -1,8 +1,3 @@
-"""
-TODO
-- website does not support ssl message
-"""
-
 from utils.constants import *
 from utils.packetCreator import *
 from operator import itemgetter
@@ -10,14 +5,12 @@ import socket,binascii, sys
 import time
 import copy
 import argparse
-#from db_manager import DBManager
 from tls_config import TLSConfig
+#from db_manager import DBManager
 
 from messages import *
 
-
 #TLS/SSL handshake RFC2246 pg 31
-
 """
 Format of an SSL record
 Byte 0 = SSL record type
@@ -89,7 +82,7 @@ class SSLConnection:
         pkt = recordHeader.write() + p
         return pkt
 
-    #@param parseUntil to stop the parsing when that information is extracted
+    # @param parseUntil to stop the parsing when that information is extracted
     # parseUntil  ServerVersion, Compression
     def _readRecordLayer(self,sock,parseUntil):
         b = bytearray(0)
@@ -337,7 +330,7 @@ class SSLConnection:
                     print "[+] Ec Point formats supported"
 
         except socket.gaierror, msg:
-            print "[!] Check whether website exists. Error:%s" %msg
+            print "[!] Check whether website exists. Error:%s" %msopenhage
 
         except socket.error, msg:
             print "[!] Could not connect to target host because %s" %msg

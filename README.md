@@ -21,4 +21,4 @@ Requirements
 
 LICENSE
 -------
-The code is released under MIT License. To read more about the details about it, visit http://choosealicense.com/licenses/mit/ 
+The code is released under MIT License. To read more about it and what does it means for humans, visit http://choosealicense.com/licenses/mit/ 

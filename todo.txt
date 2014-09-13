@@ -1,3 +1,5 @@
+TODO
+*- improve TLS parsing
 *- handle case when server hello and certificate come in same packet
 *- crashing for 4shared.com
 - some superflous files for x509 parsing. keyfactory.py pem.py pycrypto_rsakey.py python_rsakey.py rsakey.py tackwrapper.py

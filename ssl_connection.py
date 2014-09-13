@@ -408,6 +408,13 @@ def extensionTest(host, version):
 def print_scan_result():
     pass
 
+# parse commandline args
+def parse_args():
+    parser = argparse.ArgumentParser(description="Scan for various TLS configurations")
+    parser.add_argument("-h", "--host", required=True, help="The hostname to be scanned for")
+    parser.add_argument("-p", "--port", help="Port number to scan at, defaults to 443")
+    parser.add_argument("-a", "--all", help="Scan for all parameters")
+
 def main(argv):
     if len(argv) == 1:
         print "[!] Give host and port \n"

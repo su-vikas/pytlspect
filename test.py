@@ -71,7 +71,7 @@ def test_clienthello():
         except:
             print "[!] caught it caught %s" % msg
 
-                print data
+        print data
 
         if data[0] == '\x15':
             alert = Alert().parse(data)

@@ -1,5 +1,7 @@
-FEATURES:
---------
+FEATURES (not in priority order):
+---------------------------------
+- add support for sslv2
+- report result in json as well. 
 - Reduce the minimum number of connections required to scan information. Compression etc information can be collected in one connection
 - improve TLS packet parsing
 - handle case when server hello and certificate come in same packet

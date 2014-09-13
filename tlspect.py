@@ -1,40 +1,13 @@
+#! /usr/bin/env python
+
+# Author: Vikas Gupta
+# See the LICENSE file for legal information regarding use of this file.
+
 import sys, os
 import argparse
 from utils.constants import *
 from operator import itemgetter
 from ssl_connection import SSLConnection
-
-def certificateTest(host, version):
-    version=(3,2)
-    connection_obj = SSLConnection(host,version,443,5.0)
-    print "[*] CERTIFICATE CHAIN"
-    connection_obj.scanCertificates(host, version)
-
-def extensionTest(host, version):
-    version=(3,2)
-    connection_obj = SSLConnection(host,version,443,5.0)
-    connection_obj.supportedExtensions()
-
-def print_scan_result():
-    pass
-
-# parse commandline args
-def parse_args():
-    parser = argparse.ArgumentParser(description="Scan for various TLS configurations")
-    parser.add_argument("-d", "--domain", required=True, help="The hostname to be scanned for")
-    parser.add_argument("-p", "--port", help="Port number to scan at, defaults to 443")
-    parser.add_argument("-a", "--all", help="Scan for all parameters")
-    parser.add_argument("-v", "--version", default=(3,2), help="Scan for all parameters")
-
-    args = vars(parser.parse_args())
-    host = args['domain']
-    port = args['port']
-    version = args['version']
-    all_param = args['all']
-
-    cipherTest(host,version)
-    cert = certificateTest(host, version)
-    extensionTest(host, version)
 
 def cipherTest(host, version):
     conn = SSLConnection(host,version,443,5.0)
@@ -78,6 +51,45 @@ def cipherTest(host, version):
     #tls_config = TLSConfig(domain = host,ip= conn.getIP(), tls_versions = sslVersions, ciphersuites = cipherSuitesDetected, compression = compression)
     #treturn tls_config
 
+
+def certificateTest(host, version):
+    version=(3,2)
+    connection_obj = SSLConnection(host,version,443,5.0)
+    print "[*] CERTIFICATE CHAIN"
+    connection_obj.scanCertificates(host, version)
+
+def extensionTest(host, version):
+    version=(3,2)
+    connection_obj = SSLConnection(host,version,443,5.0)
+    connection_obj.supportedExtensions()
+
+def print_scan_result():
+    pass
+
+# parse commandline args
+def parse_args():
+    parser = argparse.ArgumentParser(description="Scan for various TLS configurations")
+    parser.add_argument("-d", "--domain", required=True, help="The hostname to be scanned for")
+    parser.add_argument("-p", "--port", help="Port number to scan at, defaults to 443")
+    parser.add_argument("-a", "--all", help="Scan for all parameters")
+    parser.add_argument("-v", "--version", default=(3,2), help="Scan for all parameters")
+
+    parser.add_argument("-c","--ciphers", help="Scan only for ciphers supported" )
+    parser.add_argument("-t","--tls-versions", help="Scan only for supported TLS versions")
+    parser.add_argument("-w", "--weak-ciphers", help="Report potentially weak ciphers only")
+    parser.add_argument("-C", "--cert", help="Show certificate details")
+    parser.add_argument("-s", "--cert-chain", help="Show certificate chain details")
+    parser.add_argument("-e", "--tls-ext", help="Show supported TLS extensions")
+
+    args = vars(parser.parse_args())
+    host = args['domain']
+    port = args['port']
+    version = args['version']
+    all_param = args['all']
+
+    cipherTest(host,version)
+    cert = certificateTest(host, version)
+    extensionTest(host, version)
 
 def main(argv):
     parse_args()

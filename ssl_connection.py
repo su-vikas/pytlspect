@@ -296,6 +296,7 @@ class SSLConnection:
     def supportedExtensions(self):
         cHello = ClientHello()
         ciphersuite =copy.copy(CipherSuite.all_suites)
+#TODO fix the version usage
         version=(3,1)
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:

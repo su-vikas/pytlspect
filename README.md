@@ -16,7 +16,7 @@ To scan a HTTPS website:
         tlspect.py -d google.com
 
 Requirements
-* M2Crypto
+* M2Crypto/OpenSSL (these are optional, will work without them as well)
 * pewee for storing data to database. 
 
 LICENSE

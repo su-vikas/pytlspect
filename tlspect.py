@@ -15,6 +15,7 @@ def cipherTest(host, version):
     print "[+] HOST:",host
     print "[+] IP:", conn.getIP(), " \n"
 
+    conn = SSLConnection(host,version,443,5.0)
     sslVersions = conn.enumerateSSLVersions()
     print "\n[+] SSL VERSIONS SUPPORTED:"
     if len(sslVersions)> 0:
@@ -80,6 +81,7 @@ def parse_args():
     parser.add_argument("-C", "--cert", help="Show certificate details")
     parser.add_argument("-s", "--cert-chain", help="Show certificate chain details")
     parser.add_argument("-e", "--tls-ext", help="Show supported TLS extensions")
+    #parser.add_argument("-e", "--tls-ext", help="Show supported TLS extensions")
 
     args = vars(parser.parse_args())
     host = args['domain']

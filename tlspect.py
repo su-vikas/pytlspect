@@ -4,10 +4,12 @@
 # See the LICENSE file for legal information regarding use of this file.
 
 import sys, os
+import time
 import argparse
 from utils.constants import *
 from operator import itemgetter
 from ssl_connection import SSLConnection
+from errors import *
 
 def cipherTest(host, version):
     conn = SSLConnection(host,version,443,5.0)
@@ -15,7 +17,6 @@ def cipherTest(host, version):
     print "[+] HOST:",host
     print "[+] IP:", conn.getIP(), " \n"
 
-    conn = SSLConnection(host,version,443,5.0)
     sslVersions = conn.enumerateSSLVersions()
     print "\n[+] SSL VERSIONS SUPPORTED:"
     if len(sslVersions)> 0:
@@ -67,6 +68,38 @@ def extensionTest(host, version):
 def print_scan_result():
     pass
 
+
+def poodleTest(host, version):
+    """
+     make a connection with TLS1.0, drop it
+     make another connection with SSLv3 and containing TLS_FALLBACK_SCSV ciphersuite in clienthello.
+     if alert (inapproprite_fallback(86) is returned, server is GOOD, not poodle susceptible)
+     if no alert server is susceptible to POODLE.
+     REF: http://www.exploresecurity.com/poodle-and-the-tls_fallback_scsv-remedy/
+    """
+    # make connection with TLS1.0
+    try:
+        version = (3,0)
+        conn = SSLConnection(host, version, 443, 5.0)
+        value = conn.doClientHello(host, version)
+        if value is "Alert":
+            print "False"
+        elif value is "Supported":
+            print "True"
+
+        #print "[+] IP:", conn.getIP(), " \n"
+    except Exception, err:
+        print "Error"
+
+"""
+    time.sleep(3)
+    #make connection with SSLv3.0, i.e emulate downgrade situation with TLS_FALLBACK_SCSV ciphersuite
+    version = (3,0)
+    conn = SSLConnection(host, version, 443, 5.0)
+    conn.doClientHello(host, version)
+    """
+    #should give an alert now
+
 # parse commandline args
 def parse_args():
     parser = argparse.ArgumentParser(description="Scan for various TLS configurations")
@@ -81,17 +114,27 @@ def parse_args():
     parser.add_argument("-C", "--cert", help="Show certificate details")
     parser.add_argument("-s", "--cert-chain", help="Show certificate chain details")
     parser.add_argument("-e", "--tls-ext", help="Show supported TLS extensions")
-    #parser.add_argument("-e", "--tls-ext", help="Show supported TLS extensions")
+    parser.add_argument("-P", "--poodle", help="Test for Poodle SSL attack", action="store_true", default=False,dest='poodle_switch')
 
+
+
+#TODO fix the issue below with arg parsing
+    results = parser.parse_args()
     args = vars(parser.parse_args())
     host = args['domain']
     port = args['port']
     version = args['version']
     all_param = args['all']
 
-    cipherTest(host,version)
-    cert = certificateTest(host, version)
-    extensionTest(host, version)
+    if results.poodle_switch:
+    # test for poodle.
+        poodleTest(host, version)
+    else:
+        cipherTest(host,version)
+        cert = certificateTest(host, version)
+        extensionTest(host, version)
+
+
 
 def main(argv):
     parse_args()

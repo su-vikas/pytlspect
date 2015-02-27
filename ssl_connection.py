@@ -4,6 +4,7 @@ from operator import itemgetter
 import socket, sys
 import copy
 import argparse
+from errors import *
 #from db_manager import DBManager
 from messages import *
 
@@ -89,7 +90,8 @@ class SSLConnection:
             try:
                 bytes_read = sock.recv(recordHeaderLength - len(b))
                 if len(bytes_read) == 0:
-                    print "[!] Read 0 bytes from socket"
+                    continue
+                    #print "[!] Read 0 bytes from socket"
 
                 b += bytearray(bytes_read)
 
@@ -97,23 +99,37 @@ class SSLConnection:
                     if b[0] in ContentType.all:
                         recordHeaderLength = 5
                         if b[0] is ContentType.alert:
-                            #print "Got an alert"
-                            return
+                            #print "Got an alert"#, alert_msg.description
+                            #bytes_read = sock.recv(recordHeaderLength - len(b))
+
+                            """
+                            if len(bytes_read) == 0:
+                                print "[!] Read 0 bytes from socket"
+                            else:
+                                b += bytearray(bytes_read)
+                                alert_msg = Alert().parse(Parser(b))
+                                print alert_msg.level
+                                print alert_msg.description
+                                """
+                            return "Alert"
                     else:
-                        print "[!] unknown ssl record layer"
+                        #TODO did for poodle
+                        #pass
+                        #print "[!] unknown ssl record layer"
                         break
                 elif len(b) == recordHeaderLength:
                     break
 
             except socket.error, msg:
-                print "[!] Error in reading from socket because %s" %msg
+                pass #TODO did for poodle
+                #print "[!] Error in reading from socket because %s"# %msg
                 break
 
         #parse the record layer
         recordLayer = RecordHeader3().parse(Parser(b))
 
         if recordLayer.length > 16384:
-            print "[!] Bufferoverflow, record length more than supported"
+            raise TLSError("[!] Bufferoverflow, record length more than supported")
 
         #TODO handle case when in one record server hello, cert and server hello done comes
 
@@ -123,10 +139,11 @@ class SSLConnection:
                 bytes_read = sock.recv(recordLayer.length - len(b))
                 #print recordLayer.length, len(b), len(bytes_read)
             except socket.error, msg:
-                print "[!] Error in reading from socket because %s" %msg
+                raise TLSError("[!] Error in reading from socket")
 
             if len(bytes_read) == 0:
-                print "[!] Read 0 bytes from socket"
+                continue
+                #print "[!] Read 0 bytes from socket"
 
             b += bytearray(bytes_read)
             if b[0] is HandshakeType.server_hello:
@@ -154,7 +171,8 @@ class SSLConnection:
                 #    print x.subject
                 #    print "----"
             elif b[0] is HandshakeType.server_hello_done:
-                print "[+] Server hello done"
+                pass
+                #print "[+] Server hello done"
             else:
                 pass
                 #print "maza nahi aya"
@@ -163,7 +181,7 @@ class SSLConnection:
                 break
         return
 
-    def doClientHello(self, version):
+    def doClientHello(self, host, version):
         """
         struct {
             ProtocolVersion client_version;
@@ -176,17 +194,28 @@ class SSLConnection:
 
         """
         try:
+            cHell0 = ClientHello()
+            ciphersuite = CipherSuite.poodleTestSuites
+            pkt = self._clientHelloPacket(version,ciphersuite)
             self._doPreHandshake()
-            pkt = _clientHelloPacket(version)
-
             self.clientSocket.send(pkt)
+
+            # read the packet
+            returned_value = self._readRecordLayer(self.clientSocket, None)
+            if returned_value is "Alert":
+                return "Alert"
+            else:
+                return "Supported"
 
         except socket.error, msg:
             #TODO handle errors for timeout
-            print "[!] Could not connect to target host because %s" %msg
+            raise
+            #print "[!] Could not connect to target host because %s" %msg
             #TODO return or exit or escalate the exception
         except socket.gaierror, msg:
-            print "[!] Check whether website exists. Error:%s" %msg
+            raise #TODO did for poodle
+            #print "[!] Check whether website exists. Error:%s" %msg
+
 
     def enumerateCiphers(self,version):
         cipherSuitesDetected = []
@@ -214,12 +243,13 @@ class SSLConnection:
                         self.clientSocket.close()
                 else:
                     if cipher is not None:
-                        print "[!] Server returned cipher not in ciphersuite %s"%(cipher)
+                        raise TLSError("[!] Server returned cipher not in ciphersuite")
+                        #print  %s"%(cipher)
                     break
 
 
             except socket.error, msg:
-                print "[!] Could not connect to target host because %s" %msg
+                raise TLSError("[!] Could not connect to target host")
 
         return cipherSuitesDetected
 
@@ -244,7 +274,8 @@ class SSLConnection:
                     self.clientSocket.close()
 
             except socket.error, msg:
-                print "[!] Could not connect to target host because %s" %msg
+                raise TLSError("[!] Could not connect to target host")
+                #print "[!] Could not connect to target host because %s" %msg
 
         return supportedVersions
 
@@ -263,7 +294,8 @@ class SSLConnection:
             return compressionSupported
 
         except socket.error, msg:
-            print "[!] Could not connect to target host because %s" %msg
+            raise TLSError("[!] Could not connect to target host")
+            #print "[!] Could not connect to target host because %s" %msg
 
     def scanCertificates(self, host, version):
         cHello = ClientHello()
@@ -283,14 +315,17 @@ class SSLConnection:
             return certificate
 
         except socket.gaierror, msg:
-            print "[!] Check whether website exists. Error:%s" %msg
+            raise TLSError("[!] Could not connect to target host, check whether the domain entered is correct")
+            #print "[!] Check whether website exists. Error:%s" %msg
 
         except socket.error, msg:
-            print "[!] Could not connect to target host because %s" %msg
-            return None
+            raise TLSError("[!] Could not connect to target host")
+            #print "[!] Could not connect to target host because %s" %msg
+            #return None
         except SyntaxError:
-            print "[!] Error in fetching certificate, try again later"
-            return None
+            raise TLSError("[!] Could not connect to target host")
+            #print "[!] Error in fetching certificate, try again later"
+            #return None
 
     # Check for all supported extensions
     def supportedExtensions(self):

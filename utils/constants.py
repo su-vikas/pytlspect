@@ -152,6 +152,7 @@ class AlertDescription:
     user_canceled = 90
     no_renegotiation = 100
     unknown_psk_identity = 115
+    inappropriate_fallback = 86   # in case of POODLE downgrade attack, this alert is used
 
 class OIDMap:
     # taken from https://github.com/hiviah/pyx509/tree/master/pkcs7/asn1_models
@@ -782,6 +783,8 @@ class CipherSuite:
     TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8 = 0xC0AF
     TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA = 0x000B
     TLS_DH_anon_WITH_AES_128_CBC_SHA = 0x0034
+    #poodle defense dummy ciphersuite
+    TLS_FALLBACK_SCSV = 0x5600
 
     all_suites = []
     all_suites.append(TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256)
@@ -1150,6 +1153,13 @@ class CipherSuite:
     ecdheSuites.append(TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA)
     ecdheSuites.append(TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA)
     ecdheSuites.append(TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA)
+
+    poodleTestSuites = []
+    poodleTestSuites.append(TLS_RSA_WITH_RC4_128_SHA)
+    poodleTestSuites.append(TLS_RSA_WITH_3DES_EDE_CBC_SHA)
+    poodleTestSuites.append(TLS_RSA_WITH_AES_128_CBC_SHA)
+    poodleTestSuites.append(TLS_RSA_WITH_AES_256_CBC_SHA)
+    poodleTestSuites.append(TLS_FALLBACK_SCSV)   #in the end, as ciphersuites are in order of clients preference
 
     #ecdheSuites.append(ECDHE-ECDSA-DES-CBC3-SHA)
     #ecdheSuites.append(ECDHE-ECDSA-AES128-SHA)

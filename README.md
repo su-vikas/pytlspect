@@ -18,9 +18,31 @@ USAGE
 Currently, it cannot be installed. It should be used directly as a script. 
 
 To scan a HTTPS website:
-        tlspect.py -d google.com
+usage: tlspect.py [-h] -d HOST [-p PORT] [-a] [-v VERSION] [-c] [-z] [-t] [-w]
+                  [-C] [-s] [-e] [-P] [-H]
 
-Requirements
+Scan for various TLS configurations
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d HOST, --domain HOST
+                        The hostname to be scanned for
+  -p PORT, --port PORT  Port number to scan at, defaults to 443
+  -a, --all             Scan for all parameters
+  -v VERSION, --version VERSION
+                        SSL version to scan for
+  -c, --ciphers         Scan only for ciphers supported
+  -z, --compression     Scan only for if compression supported
+  -t, --tls-versions    Scan only for supported TLS versions
+  -w, --weak-ciphers    Report potentially weak ciphers only
+  -C, --cert            Show certificate details
+  -s, --cert-chain      Show certificate chain details
+  -e, --tls-ext         Show supported TLS extensions
+  -P, --poodle          Test for Poodle SSL attack
+
+REQUIREMENTS
+-------------
+
 * M2Crypto/OpenSSL (these are optional, will work without them as well)
 * pewee for storing data to database. 
 

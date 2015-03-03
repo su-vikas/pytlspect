@@ -3,6 +3,7 @@ TLSpect
 A SSL/TLS scanner written in python. The aim of the project to replicate ssllabs SSL analysis tool. The core code of the project is heavily borrowed from TLSlite project (https://github.com/trevp/tlslite).
 
 At present the TLSpect can perform following analysis:
+
 * SSL/TLS versions supported
 * SSL/TLS ciphersuites supported for each version
 * Certificate chain information and their expiry validation
@@ -24,6 +25,7 @@ usage: tlspect.py [-h] -d HOST [-p PORT] [-a] [-v VERSION] [-c] [-z] [-t] [-w]
 Scan for various TLS configurations
 
 optional arguments:
+
 * -h, --help            show this help message and exit
 * -d HOST, --domain HOST
 *                       The hostname to be scanned for

@@ -1,10 +1,15 @@
-pyTLSpect
+TLSpect
 =========
-A SSL/TLS scanner written in python. The output includes TLS versions supported, TLS ciphersuites supported in server preferred order, TLS extensions supported, x509 certificate information   
+A SSL/TLS scanner written in python. The aim of the project to replicate ssllabs SSL analysis tool. The core code of the project is heavily borrowed from TLSlite project (https://github.com/trevp/tlslite).
 
-There are many TLS scanner already available. The reason to write another such tool is totally for learning purpose. 
+At present the TLSpect can perform following analysis:
+- SSL/TLS versions supported
+- SSL/TLS ciphersuites supported for each version
+- Certificate chain information and their expiry validation
+- SSL/TLS extensions supported
+- Test for POODLE
 
-The underlying packet handling code is inspired from TLSlite project. (https://github.com/trevp/tlslite)
+and some other minor features. Other features envisaged are on the lines of ssllabs tool. 
 
 Presently, the code is still work under progess and hence not stable yet. Some crashes are still observed here and there.
 

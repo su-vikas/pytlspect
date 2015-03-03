@@ -80,9 +80,9 @@ class SSLConnection:
         pkt = recordHeader.write() + p
         return pkt
 
-    # @param parseUntil to stop the parsing when that information is extracted
-    # parseUntil  ServerVersion, Compression
     def _readRecordLayer(self,sock,parseUntil):
+        # @param parseuntil to stop the parsing when that information is extracted
+        # parseuntil  serverversion, compression
         b = bytearray(0)
         recordHeaderLength = 1
 
@@ -216,7 +216,6 @@ class SSLConnection:
             raise #TODO did for poodle
             #print "[!] Check whether website exists. Error:%s" %msg
 
-
     def enumerateCiphers(self,version):
         cipherSuitesDetected = []
         cHello = ClientHello()
@@ -231,7 +230,7 @@ class SSLConnection:
             try:
                 self.clientSocket.send(pkt)
                 cipher = self._readRecordLayer(self.clientSocket, None)
-                if cipher in ciphersuite:
+                if cipher in ciphersuite :
                     cipher_accepted = cipher
                     cipher_id = '%06x' % cipher
                     cipher_id = cipher_id.upper() # all names in upper case in constants.py
@@ -242,9 +241,12 @@ class SSLConnection:
                         #print CipherSuite.cipher_suites[cipher_id]['name']
                         self.clientSocket.close()
                 else:
-                    if cipher is not None:
+                    # server returns alert, when no ciphersuits match
+                    if "Alert" in cipher:
+                        break
+
+                    elif cipher is not None:
                         raise TLSError("[!] Server returned cipher not in ciphersuite")
-                        #print  %s"%(cipher)
                     break
 
 
@@ -252,7 +254,6 @@ class SSLConnection:
                 raise TLSError("[!] Could not connect to target host")
 
         return cipherSuitesDetected
-
 
     def enumerateSSLVersions(self):
         cHello = ClientHello()
@@ -268,7 +269,7 @@ class SSLConnection:
             try:
                 self.clientSocket.send(pkt)
                 supportedVersion = self._readRecordLayer(self.clientSocket,"ServerVersion")
-                if supportedVersion is not None:
+                if supportedVersion is not None and "Alert" not in supportedVersion:
                     supportedVersions.append(supportedVersion)
                     #print supportedVersion
                     self.clientSocket.close()
@@ -278,7 +279,6 @@ class SSLConnection:
                 #print "[!] Could not connect to target host because %s" %msg
 
         return supportedVersions
-
 
     def isCompressionSupported(self):
         cHello = ClientHello()
@@ -297,7 +297,7 @@ class SSLConnection:
             raise TLSError("[!] Could not connect to target host")
             #print "[!] Could not connect to target host because %s" %msg
 
-    def scanCertificates(self, host, version):
+    def scanCertificates(self, version):
         cHello = ClientHello()
         ciphersuite =copy.copy(CipherSuite.all_suites)
         pkt = self._clientHelloPacket(version, ciphersuite)
@@ -327,11 +327,11 @@ class SSLConnection:
             #print "[!] Error in fetching certificate, try again later"
             #return None
 
-    # Check for all supported extensions
     def supportedExtensions(self):
+        # Check for all supported extensions
         cHello = ClientHello()
         ciphersuite =copy.copy(CipherSuite.all_suites)
-#TODO fix the version usage
+        #TODO fix the version usage
         version=(3,1)
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:

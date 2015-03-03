@@ -315,16 +315,19 @@ class SSLConnection:
             return certificate
 
         except socket.gaierror, msg:
+            print msg
             raise TLSError("[!] Could not connect to target host, check whether the domain entered is correct")
             #print "[!] Check whether website exists. Error:%s" %msg
 
         except socket.error, msg:
+            print msg
             raise TLSError("[!] Could not connect to target host")
             #print "[!] Could not connect to target host because %s" %msg
             #return None
-        except SyntaxError:
-            raise TLSError("[!] Could not connect to target host")
-            #print "[!] Error in fetching certificate, try again later"
+       # except SyntaxError as err:
+            #print err
+            #raise TLSError("[!] Could not connect to target host")
+       #     #print "[!] Error in fetching certificate, try again later"
             #return None
 
     def supportedExtensions(self):

@@ -24,24 +24,27 @@ class TLSpect:
     def getIP(self):
         """ Get the IP of the host being scanned"""
         self.resultObj.IP = self.conn.getIP()
+        self.resultObj.printIP()
 
     def enumerateSSLVersion(self):
         """ Get the list of all SSL versions supported"""
         sslVersions = self.conn.enumerateSSLVersions()
         self.resultObj.sslVersions = sslVersions
         self.resultObj.maxSSLVersion = max(sslVersions, key=itemgetter(1))
+        self.resultObj.printSSLVersions()
 
     def enumerateCiphers(self):
         """ Get the list of ciphers supported for various versions in default order"""
         for s in self.resultObj.sslVersions:
             cipherSuitesDetected = self.conn.enumerateCiphers(s)
 
+            cipherSuitesName = []
             for cipher_id in cipherSuitesDetected:
-                cipherSuitesName = []
                 cipherSuitesName.append(CipherSuite.cipher_suites[cipher_id]['name'])
             self.resultObj.updateCiphers(s, cipherSuitesName)
                 #print "         " + CipherSuite.cipher_suites[cipher_id]['name']
 
+        self.resultObj.printCipherSuites()
         print "\n[+] LIST OF POTENTIALLY WEAK CIPHERS:"
         for cipher_id in cipherSuitesDetected:
             if 'RC4' in CipherSuite.cipher_suites[cipher_id]['enc']:
@@ -50,15 +53,15 @@ class TLSpect:
     def isCompression(self):
         """ Check if the compression is supported """
         self.resultObj.isCompression = self.conn.isCompressionSupported()
+        self.resultObj.printCompression()
 
-        def certificateTest(self):
+    def certificateTest(self):
+        """ extract the certificate chain information """
         print "[*] CERTIFICATE CHAIN"
         self.conn.scanCertificates(self.version)
 
-    def extensionTest(host, version):
-        version=(3,2)
-        connection_obj = SSLConnection(host,version,443,5.0)
-        connection_obj.supportedExtensions()
+    def extensionTest(self):
+        self.conn.supportedExtensions()
 
     def poodleTest(host, version):
         """
@@ -88,6 +91,9 @@ class TLSpect:
         #conn = SSLConnection(host, version, 443, 5.0)
         #conn.doClientHello(host, version)
         #should give an alert now
+
+    def printResults(self):
+        print self.resultObj
 
 
 def parse_args():
@@ -124,7 +130,8 @@ def parse_args():
         tlspect.enumerateCiphers()
         tlspect.isCompression()
         tlspect.certificateTest()
-        extensionTest(host, version)
+        tlspect.extensionTest()
+
 
     if results.ciphers:
         tlspect.enumerateSSLVersion()
@@ -144,6 +151,7 @@ def parse_args():
 
     if results.poodle_switch:
         poodleTest(host, version)
+
 
 def main(argv):
     parse_args()

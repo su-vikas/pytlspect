@@ -39,6 +39,9 @@ class Result:
     def updateCiphers(self, version, cipherSuitesDetected):
         """ updates the dictionary object mapping ssl versions detected and
         correspdonding ciphersDetected"""
+        if not self.supportedCiphers:
+            self.supportedCiphers = {}
+
         if version not in self.supportedCiphers:
             self.supportedCiphers[version] = []
             self.supportedCiphers[version] += cipherSuitesDetected
@@ -55,7 +58,7 @@ class Result:
                 print "\n     [+] TLS Version:", keys
                 if value:
                     for c in value:
-                        print "         " + v
+                        print "         " + c
 
     def printSSLVersions(self):
         """ print ssl versions detected to stdout"""

@@ -1,6 +1,7 @@
 FEATURES (not in priority order):
 ---------------------------------
 - determine all IPs of a given host
+- validity of certificates
 - add support for sslv2
 - report result in json as well. 
 - Reduce the minimum number of connections required to scan information. Compression etc information can be collected in one connection

@@ -22,6 +22,7 @@
 
 """Class representing an X.509 certificate."""
 
+import datetime
 from utils.asn1parser import ASN1Parser
 from utils.constants import *
 from utils.cryptomath import *
@@ -72,6 +73,7 @@ class X509(object):
         bytes = dePem(s, "CERTIFICATE")
         self.parseBinary(bytes)
         return self
+
 
     def parseBinary(self, bytes):
         """Parse a DER-encoded X.509 certificate.
@@ -128,10 +130,10 @@ class X509(object):
 
         #get the validity
         self.validFrom = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(0)
-        self.validFrom = self.validFrom.value[:6]
+        self.validFrom = datetime.datetime.strptime(str(self.validFrom.value[:6]),"%y%m%d")
 
         self.validUntil = ASN1Parser(tbsCertificateP.getChildBytes(4)).getChild(1)
-        self.validUntil = self.validUntil.value[:6]
+        self.validUntil = datetime.datetime.strptime(str(self.validUntil.value[:6]), "%y%m%d")
 
         #Get the subject
         # CANT HANDLE IF ANYTHING CHANGES.  HACKING TO PARSE CERT
@@ -278,3 +280,19 @@ def get_oid_str(oid_tuple):
     oid_str = oid_str[0:oid_str_len]
 
     return oid_str
+
+def validateCertificateChain(host, certificate_chain):
+    """ validate the expiry date subject """
+    #TODO full certificate validation
+    for cert in certificate_chain.x509List:
+        pass
+
+
+
+
+
+
+
+
+
+

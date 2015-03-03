@@ -69,11 +69,9 @@ class X509(object):
         certificate wrapped with "-----BEGIN CERTIFICATE-----" and
         "-----END CERTIFICATE-----" tags).
         """
-
         bytes = dePem(s, "CERTIFICATE")
         self.parseBinary(bytes)
         return self
-
 
     def parseBinary(self, bytes):
         """Parse a DER-encoded X.509 certificate.
@@ -280,16 +278,6 @@ def get_oid_str(oid_tuple):
     oid_str = oid_str[0:oid_str_len]
 
     return oid_str
-
-def validateCertificateChain(host, certificate_chain):
-    """ validate the expiry date subject """
-    #TODO full certificate validation
-    for cert in certificate_chain.x509List:
-        pass
-
-
-
-
 
 
 

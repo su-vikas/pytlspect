@@ -11,6 +11,7 @@ from utils.constants import *
 from operator import itemgetter
 from ssl_connection import SSLConnection
 from errors import *
+from cert_checker import CertChecker
 
 class TLSpect:
     def __init__(self, version = (3,2), port = 443, IP = None, host = None, socketTimeout = 5.0):
@@ -57,8 +58,13 @@ class TLSpect:
 
     def certificateTest(self):
         """ extract the certificate chain information """
-        print "[*] CERTIFICATE CHAIN"
-        self.conn.scanCertificates(self.version)
+        certificate_chain = self.conn.scanCertificates(self.version)
+        checker = CertChecker(self.host, certificate_chain)
+        checker.checkExpiryDate()
+
+        self.resultObj.certChain = certificate_chain
+        self.resultObj.printCertificates()
+
 
     def extensionTest(self):
         self.conn.supportedExtensions()

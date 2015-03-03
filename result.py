@@ -86,3 +86,10 @@ class Result:
         print " \n "
 
 
+    def printCertificates(self):
+        print "[*] CERTIFICATE CHAIN"
+        if self.certChain:
+            for x in self.certChain.certChain.x509List:
+                 x.print_cert()
+
+

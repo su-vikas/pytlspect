@@ -13,6 +13,29 @@ FEATURES (not in priority order):
 - Message if website does not support TLS. 
 - Add documentation
 
+-> FROM SSLLABS:
+- secure renegotation
+- BEAST attack
+- POODLE sslv3
+- POODLE TLS
+- Downgrade attack prevention
+- heartbleed
+- CCS
+- Forward secrecy
+- session resumption (caching)
+- session resumption (tickets)
+- OCSP stapling
+- HSTS
+- Public Key Pinning (HPKP)
+- long handshake intolerance
+- TLS extension intolerance
+- tls version intolerance
+- ssl 2 handshake compatibility
+- handshake simulation
+
+
+- Test duration
+
 
 TESTING:
 -------

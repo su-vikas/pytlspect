@@ -26,6 +26,7 @@ class Writer(object):
         for e in seq:
             self.add(e, length)
 
+
 class Parser(object):
     def __init__(self, bytes):
         self.bytes = bytes

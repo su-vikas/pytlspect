@@ -85,7 +85,6 @@ class Result:
                 print "\n[+] COMPRESSION SUPPORT: Yes"
         print " \n "
 
-
     def printCertificates(self):
         print "[*] CERTIFICATE CHAIN"
         if self.certChain:

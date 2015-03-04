@@ -484,6 +484,10 @@ class CipherSuite:
     TLS_DHE_DSS_WITH_DES_CBC_SHA = 0x0012
     TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA = 0x0013
     TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = 0x0014
+    TLS_RSA_EXPORT1024_WITH_RC4_56_MD5 = 0x0060
+    TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5 = 0x0061
+    TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA = 0x0062
+    TLS_RSA_EXPORT1024_WITH_RC4_56_SHA = 0x0064
     TLS_DHE_RSA_WITH_DES_CBC_SHA = 0x0015
     TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA = 0x0016
     TLS_DH_anon_EXPORT_WITH_RC4_40_MD5 = 0x0017
@@ -1160,6 +1164,17 @@ class CipherSuite:
     poodleTestSuites.append(TLS_RSA_WITH_AES_128_CBC_SHA)
     poodleTestSuites.append(TLS_RSA_WITH_AES_256_CBC_SHA)
     poodleTestSuites.append(TLS_FALLBACK_SCSV)   #in the end, as ciphersuites are in order of clients preference
+
+    freakTestSuites = []
+    freakTestSuites.append(TLS_RSA_EXPORT_WITH_RC4_40_MD5)
+    freakTestSuites.append(TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5)
+    freakTestSuites.append(TLS_RSA_EXPORT_WITH_DES40_CBC_SHA)
+    freakTestSuites.append(TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA)
+    freakTestSuites.append(TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA)
+    freakTestSuites.append(TLS_RSA_EXPORT1024_WITH_RC4_56_MD5)
+    freakTestSuites.append(TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5)
+    freakTestSuites.append(TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA)
+    freakTestSuites.append(TLS_RSA_EXPORT1024_WITH_RC4_56_SHA)
 
     #ecdheSuites.append(ECDHE-ECDSA-DES-CBC3-SHA)
     #ecdheSuites.append(ECDHE-ECDSA-AES128-SHA)

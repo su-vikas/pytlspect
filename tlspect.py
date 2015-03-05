@@ -3,8 +3,12 @@
 # Author: Vikas Gupta
 # See the LICENSE file for legal information regarding use of this file.
 
-import sys, os
+import sys
+import os
+import copy
 import time
+import csv
+from multiprocessing import Pool
 import argparse
 from result import Result
 from utils.constants import *
@@ -32,7 +36,7 @@ class TLSpect:
         sslVersions = self.conn.enumerateSSLVersions()
         self.resultObj.sslVersions = sslVersions
         self.resultObj.maxSSLVersion = max(sslVersions, key=itemgetter(1))
-        self.resultObj.printSSLVersions()
+        # self.resultObj.printSSLVersions()
 
     def enumerateCiphers(self):
         """ Get the list of ciphers supported for various versions in default order"""
@@ -98,6 +102,37 @@ class TLSpect:
         #conn.doClientHello(host, version)
         #should give an alert now
 
+    def freakTest(self):
+        """
+        The attack involves use EXPORT_RSA which either uses 512 bits or 1024 bits RSA keys.
+        FOr the test, we will check if EXPORT_RSA is enabled for a server or not.
+        """
+        try:
+            # determine ssl versions
+            self.enumerateSSLVersion()
+
+            # run scans for all versions
+            cipherSuite = copy.copy(CipherSuite.freakTestSuites)
+            for s in self.resultObj.sslVersions:
+                cipherSuitesDetected = self.conn.enumerateCiphers(version = s, customCipherSuite = cipherSuite)
+
+                cipherSuitesName = []
+                for cipher_id in cipherSuitesDetected:
+                    cipherSuitesName.append(CipherSuite.cipher_suites[cipher_id]['name'])
+                self.resultObj.updateCiphers(s, cipherSuitesName)
+
+                if cipherSuitesName:
+                    return "True"
+                else:
+                    return "False"
+                #print "         " + CipherSuite.cipher_suites[cipher_id]['name']
+
+            # self.resultObj.printCipherSuites()
+            # if export rsa supported, website is vulnerable
+
+        except Exception as err:
+            return "False"
+
     def printResults(self):
         print self.resultObj
 
@@ -117,8 +152,11 @@ def parse_args():
     parser.add_argument("-C", "--cert", help="Show certificate details", action="store_true", default=False,dest="cert_detail")
     parser.add_argument("-s", "--cert-chain", help="Show certificate chain details", action="store_true", default=False, dest="cert_chain")
     parser.add_argument("-e", "--tls-ext", help="Show supported TLS extensions", action="store_true", default=False, dest="tls_ext")
-    parser.add_argument("-P", "--poodle", help="Test for Poodle SSL attack", action="store_true", default=False,dest='poodle_switch')
+    # Follow rule of having caps for vulnerabilities.
+    parser.add_argument("-P", "--poodle", help="Test for POODLE SSL attack", action="store_true", default=False,dest='poodle_switch')
     parser.add_argument("-H", "--heartbleed", help="Test for Heartbled SSL vulnerability", action="store_true", default=False, dest='heartbleed_switch')
+    parser.add_argument("-F", "--freak", help="Test for FREAK SSL vulnerability", action="store_true", default=False, dest='freak_switch')
+
 
     results = parser.parse_args()
 
@@ -158,8 +196,19 @@ def parse_args():
     if results.poodle_switch:
         poodleTest(host, version)
 
+    if results.freak_switch:
+        print tlspect.freakTest()
+
+def launchFreak_multiprocess():
+    pool = Pool()
+    with open(sys.argv[1]) as csv_file:
+        reader = csv.reader(csv_file, delimiter = ",")
+        for row in reader:
+            tlspect = TLSpect(host = row[2])
+            print row[0] + "," + row[1] + "," + row[2] + "," + tlspect.freakTest()
 
 def main(argv):
+    # launchFreak()
     parse_args()
 
 if __name__ == "__main__":

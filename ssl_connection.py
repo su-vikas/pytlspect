@@ -216,25 +216,28 @@ class SSLConnection:
             raise #TODO did for poodle
             #print "[!] Check whether website exists. Error:%s" %msg
 
-    def enumerateCiphers(self,version):
+    def enumerateCiphers(self, version, customCipherSuite = None):
         cipherSuitesDetected = []
         cHello = ClientHello()
         cipher_accepted = None
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        #ciphersuite = CipherSuite.ecdheSuites
+        cipherSuite = None
+        if customCipherSuite:
+            cipherSuite = copy.copy(customCipherSuite)
+        else:
+            cipherSuite =copy.copy(CipherSuite.all_suites)
 
         #get the ciphersuites supported in preference order
-        while len(ciphersuite) > 0:
-            pkt = self._clientHelloPacket(version, ciphersuite)
+        while len(cipherSuite) > 0:
+            pkt = self._clientHelloPacket(version, cipherSuite)
             self._doPreHandshake()
             try:
                 self.clientSocket.send(pkt)
                 cipher = self._readRecordLayer(self.clientSocket, None)
-                if cipher in ciphersuite :
+                if cipher in cipherSuite :
                     cipher_accepted = cipher
                     cipher_id = '%06x' % cipher
                     cipher_id = cipher_id.upper() # all names in upper case in constants.py
-                    ciphersuite.remove(cipher_accepted)
+                    cipherSuite.remove(cipher_accepted)
                     #print len(ciphersuite)
                     if CipherSuite.cipher_suites.has_key(cipher_id):
                         cipherSuitesDetected.append(cipher_id)

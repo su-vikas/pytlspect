@@ -12,6 +12,7 @@ FEATURES (not in priority order):
 - fetching certificate packet is kind of hack. Make it more elegant 
 - Message if website does not support TLS. 
 - Add documentation
+- Use multiprocessing to make things fast
 
 -> FROM SSLLABS:
 - secure renegotation

@@ -373,3 +373,8 @@ class SSLConnection:
         self.ip = addr
         return self.ip
 
+    def getIPs(self):
+        addr = socket.gethostbyname(self.host)
+        self.ip = addr
+        return self.ip
+

@@ -102,10 +102,11 @@ class TLSpect:
         #conn.doClientHello(host, version)
         #should give an alert now
 
-    def freakTest(self):
+    def freakTest(self, result):
         """
         The attack involves use EXPORT_RSA which either uses 512 bits or 1024 bits RSA keys.
         FOr the test, we will check if EXPORT_RSA is enabled for a server or not.
+        @param result: to return the result in case of multiprocessing module
         """
         try:
             # determine ssl versions
@@ -122,8 +123,10 @@ class TLSpect:
                 self.resultObj.updateCiphers(s, cipherSuitesName)
 
                 if cipherSuitesName:
+                    result = "True"
                     return "True"
                 else:
+                    result = "False"
                     return "False"
                 #print "         " + CipherSuite.cipher_suites[cipher_id]['name']
 
@@ -131,6 +134,8 @@ class TLSpect:
             # if export rsa supported, website is vulnerable
 
         except Exception as err:
+            print err
+            results="False"
             return "False"
 
     def printResults(self):
@@ -145,6 +150,7 @@ def parse_args():
     parser.add_argument("-a", "--all", help="Scan for all parameters", action="store_true", default=False, dest="all_param_switch")
     parser.add_argument("-v", "--version", default=(3,2), help="SSL version to scan for", dest="version")
 
+    parser.add_argument("-i","--ips", help="Scan for all IPs", action="store_true", default=False, dest="ips")
     parser.add_argument("-c","--ciphers", help="Scan only for ciphers supported", action="store_true", default=False,dest="ciphers")
     parser.add_argument("-z","--compression", help="Scan only for if compression supported", action="store_true", default=False, dest="compress")
     parser.add_argument("-t","--tls-versions", help="Scan only for supported TLS versions", action="store_true", default=False, dest="tls_versions")
@@ -197,15 +203,7 @@ def parse_args():
         poodleTest(host, version)
 
     if results.freak_switch:
-        print tlspect.freakTest()
-
-def launchFreak_multiprocess():
-    pool = Pool()
-    with open(sys.argv[1]) as csv_file:
-        reader = csv.reader(csv_file, delimiter = ",")
-        for row in reader:
-            tlspect = TLSpect(host = row[2])
-            print row[0] + "," + row[1] + "," + row[2] + "," + tlspect.freakTest()
+        print tlspect.freakTest(result)
 
 def main(argv):
     # launchFreak()

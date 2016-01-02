@@ -50,7 +50,7 @@ BYTE 5 in the record has the following handhsake type values:
 class SSLConnection:
     #TODO test for versions supported
     def __init__(self,host,version,port = 443,timeout = 5.0):
-        self.clientSocket = None
+        self.sock = None
         self.isClientHello = False
         self.isServerHello = False
         self.isServerCertificate = False
@@ -60,10 +60,14 @@ class SSLConnection:
         self.timeout = timeout
         self.ip = None
 
+        # To make tlslite functions work over here.
+        self._handshakeBuffer = []
+        self._client = True
+
     def _doPreHandshake(self):
-        self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.clientSocket.connect((self.host, self.port))
-        self.clientSocket.settimeout(self.timeout)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.host, self.port))
+        self.sock.settimeout(self.timeout)
 
     def _clientHelloPacket(self, version, ciphersuite):
         cHello = ClientHello()
@@ -79,6 +83,282 @@ class SSLConnection:
         recordHeader = RecordHeader3().create(version, ContentType.handshake, len(p))
         pkt = recordHeader.write() + p
         return pkt
+
+    def _getMsg(self, expectedType, secondaryType=None, constructorType=None):
+        print expectedType
+        try:
+            if not isinstance(expectedType, tuple):
+                expectedType = (expectedType,)
+
+            #Spin in a loop, until we've got a non-empty record of a type we
+            #expect.  The loop will be repeated if:
+            #  - we receive a renegotiation attempt; we send no_renegotiation,
+            #    then try again
+            #  - we receive an empty application-data fragment; we try again
+            while 1:
+                for result in self._getNextRecord():
+                    if result in (0,1):
+                        yield result
+                recordHeader, p = result
+
+                #If this is an empty application-data fragment, try again
+                if recordHeader.type == ContentType.application_data:
+                    if p.index == len(p.bytes):
+                        continue
+
+                #If we received an unexpected record type...
+                print recordHeader.type, expectedType
+                if recordHeader.type not in expectedType:
+
+                    #If we received an alert...
+                    if recordHeader.type == ContentType.alert:
+                        alert = Alert().parse(p)
+
+                        #We either received a fatal error, a warning, or a
+                        #close_notify.  In any case, we're going to close the
+                        #connection.  In the latter two cases we respond with
+                        #a close_notify, but ignore any socket errors, since
+                        #the other side might have already closed the socket.
+                        if alert.level == AlertLevel.warning or \
+                           alert.description == AlertDescription.close_notify:
+
+                            #If the sendMsg() call fails because the socket has
+                            #already been closed, we will be forgiving and not
+                            #report the error nor invalidate the "resumability"
+                            #of the session.
+                            if alert.description == \
+                                   AlertDescription.close_notify:
+                                self._shutdown(True)
+                            elif alert.level == AlertLevel.warning:
+                                self._shutdown(False)
+
+                        else: #Fatal alert:
+                            self._shutdown(False)
+
+                        #Raise the alert as an exception
+                        raise TLSRemoteAlert(alert)
+
+                    # TODO fix renegotiation case
+                    #If we received a renegotiation attempt...
+                    if recordHeader.type == ContentType.handshake:
+                        subType = p.get(1)
+                        reneg = False
+                        if self._client:
+                            if subType == HandshakeType.hello_request:
+                                reneg = True
+                        else:
+                            if subType == HandshakeType.client_hello:
+                                reneg = True
+                        #Send no_renegotiation, then try again
+                        if reneg:
+                            alertMsg = Alert()
+                            alertMsg.create(AlertDescription.no_renegotiation,
+                                            AlertLevel.warning)
+                            for result in self._sendMsg(alertMsg):
+                                yield result
+                            continue
+
+                    #Otherwise: this is an unexpected record, but neither an
+                    #alert nor renegotiation
+                    for result in self._sendError(\
+                            AlertDescription.unexpected_message,
+                            "received type=%d" % recordHeader.type):
+                        yield result
+
+                break
+
+            #Parse based on content_type
+            if recordHeader.type == ContentType.change_cipher_spec:
+                yield ChangeCipherSpec().parse(p)
+            elif recordHeader.type == ContentType.alert:
+                yield Alert().parse(p)
+            elif recordHeader.type == ContentType.application_data:
+                yield ApplicationData().parse(p)
+            elif recordHeader.type == ContentType.handshake:
+                #Convert secondaryType to tuple, if it isn't already
+                if not isinstance(secondaryType, tuple):
+                    secondaryType = (secondaryType,)
+
+                #If it's a handshake message, check handshake header
+                if recordHeader.ssl2:
+                    subType = p.get(1)
+                    if subType != HandshakeType.client_hello:
+                        for result in self._sendError(\
+                                AlertDescription.unexpected_message,
+                                "Can only handle SSLv2 ClientHello messages"):
+                            yield result
+                    if HandshakeType.client_hello not in secondaryType:
+                        for result in self._sendError(\
+                                AlertDescription.unexpected_message):
+                            yield result
+                    subType = HandshakeType.client_hello
+                else:
+                    subType = p.get(1)
+                    if subType not in secondaryType:
+                        for result in self._sendError(\
+                                AlertDescription.unexpected_message,
+                                "Expecting %s, got %s" % (str(secondaryType), subType)):
+                            yield result
+
+                #Update handshake hashes
+                # self._handshake_md5.update(compat26Str(p.bytes))
+                # self._handshake_sha.update(compat26Str(p.bytes))
+                # self._handshake_sha256.update(compat26Str(p.bytes))
+
+                #Parse based on handshake type
+                if subType == HandshakeType.client_hello:
+                    yield ClientHello(recordHeader.ssl2).parse(p)
+                elif subType == HandshakeType.server_hello:
+                    yield ServerHello().parse(p)
+                elif subType == HandshakeType.certificate:
+                    yield Certificate(constructorType).parse(p)
+                elif subType == HandshakeType.certificate_request:
+                    yield CertificateRequest(self.version).parse(p)
+                elif subType == HandshakeType.certificate_verify:
+                    yield CertificateVerify(self.version).parse(p)
+                elif subType == HandshakeType.server_key_exchange:
+                    yield ServerKeyExchange(constructorType).parse(p)
+                elif subType == HandshakeType.server_hello_done:
+                    yield ServerHelloDone().parse(p)
+                elif subType == HandshakeType.client_key_exchange:
+                    yield ClientKeyExchange(constructorType, \
+                                            self.version).parse(p)
+                elif subType == HandshakeType.finished:
+                    yield Finished(self.version).parse(p)
+                elif subType == HandshakeType.next_protocol:
+                    yield NextProtocol().parse(p)
+                else:
+                    raise AssertionError()
+
+        #If an exception was raised by a Parser or Message instance:
+        except SyntaxError as e:
+            for result in self._sendError(AlertDescription.decode_error,
+                                         formatExceptionTrace(e)):
+                yield result
+
+    def _getNextRecord(self):
+        #Read the next record header
+        b = bytearray(0)
+        recordHeaderLength = 1
+        ssl2 = False
+        while 1:
+            try:
+                s = self.sock.recv(recordHeaderLength-len(b))
+            except socket.error as why:
+                #TODO what kind of error are these
+                if why.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    continue
+                else:
+                    raise
+
+            #If the connection was abruptly closed, raise an error
+            if len(s)==0:
+                raise TLSAbruptCloseError()
+
+            b += bytearray(s)
+            if len(b)==1:
+                if b[0] in ContentType.all:
+                    ssl2 = False
+                    recordHeaderLength = 5
+                elif b[0] == 128:
+                    ssl2 = True
+                    recordHeaderLength = 2
+                else:
+                    raise SyntaxError()
+            if len(b) == recordHeaderLength:
+                break
+
+        #Parse the record header
+        if ssl2:
+            r = RecordHeader2().parse(Parser(b))
+        else:
+            r = RecordHeader3().parse(Parser(b))
+
+        #Check the record header fields
+        if r.length > 18432:
+            #TODO do we need to send the error message?
+            for result in self._sendError(AlertDescription.record_overflow):
+                yield result
+
+        #Read the record contents
+        b = bytearray(0)
+        while 1:
+            try:
+                s = self.sock.recv(r.length - len(b))
+            except socket.error as why:
+                if why.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    continue
+                else:
+                    raise
+
+            #If the connection is closed, raise a socket error
+            if len(s)==0:
+                    raise TLSAbruptCloseError()
+
+            b += bytearray(s)
+            if len(b) == r.length:
+                break
+
+        #Check the record header fields (2)
+        #We do this after reading the contents from the socket, so that
+        #if there's an error, we at least don't leave extra bytes in the
+        #socket..
+        #
+        # THIS CHECK HAS NO SECURITY RELEVANCE (?), BUT COULD HURT INTEROP.
+        # SO WE LEAVE IT OUT FOR NOW.
+        #
+        #if self._versionCheck and r.version != self.version:
+        #    for result in self._sendError(AlertDescription.protocol_version,
+        #            "Version in header field: %s, should be %s" % (str(r.version),
+        #                                                       str(self.version))):
+        #        yield result
+
+        # Removed decryption sequence
+        p = Parser(b)
+
+        #If it doesn't contain handshake messages, we can just return it
+        if r.type != ContentType.handshake:
+            yield (r, p)
+        #If it's an SSLv2 ClientHello, we can return it as well
+        elif r.ssl2:
+            yield (r, p)
+        else:
+            #Otherwise, we loop through and add the handshake messages to the
+            #handshake buffer
+            while 1:
+                if p.index == len(b): #If we're at the end
+                    if not self._handshakeBuffer:
+                        for result in self._sendError(\
+                                AlertDescription.decode_error, \
+                                "Received empty handshake record"):
+                            yield result
+                    break
+                #There needs to be at least 4 bytes to get a header
+                if p.index+4 > len(b):
+                    for result in self._sendError(\
+                            AlertDescription.decode_error,
+                            "A record has a partial handshake message (1)"):
+                        yield result
+                p.get(1) # skip handshake type
+                msgLength = p.get(3)
+                if p.index+msgLength > len(b):
+                    for result in self._sendError(\
+                            AlertDescription.decode_error,
+                            "A record has a partial handshake message (2)"):
+                        yield result
+
+                handshakePair = (r, b[p.index-4 : p.index+msgLength])
+                self._handshakeBuffer.append(handshakePair)
+                p.index += msgLength
+
+            #We've moved at least one handshake message into the
+            #handshakeBuffer, return the first one
+            recordHeader, b = self._handshakeBuffer[0]
+            self._handshakeBuffer = self._handshakeBuffer[1:]
+            yield (recordHeader, Parser(b))
+
+    def _sendError(self, alertDescription, errorStr=None):
+        raise TLSLocalAlert(alert, errorStr)
 
     def _readRecordLayer(self,sock,parseUntil):
         # @param parseuntil to stop the parsing when that information is extracted
@@ -198,10 +478,10 @@ class SSLConnection:
             ciphersuite = CipherSuite.poodleTestSuites
             pkt = self._clientHelloPacket(version,ciphersuite)
             self._doPreHandshake()
-            self.clientSocket.send(pkt)
+            self.sock.send(pkt)
 
             # read the packet
-            returned_value = self._readRecordLayer(self.clientSocket, None)
+            returned_value = self._readRecordLayer(self.sock, None)
             if returned_value is "Alert":
                 return "Alert"
             else:
@@ -231,8 +511,8 @@ class SSLConnection:
             pkt = self._clientHelloPacket(version, cipherSuite)
             self._doPreHandshake()
             try:
-                self.clientSocket.send(pkt)
-                cipher = self._readRecordLayer(self.clientSocket, None)
+                self.sock.send(pkt)
+                cipher = self._readRecordLayer(self.sock, None)
                 if cipher in cipherSuite :
                     cipher_accepted = cipher
                     cipher_id = '%06x' % cipher
@@ -242,7 +522,7 @@ class SSLConnection:
                     if CipherSuite.cipher_suites.has_key(cipher_id):
                         cipherSuitesDetected.append(cipher_id)
                         #print CipherSuite.cipher_suites[cipher_id]['name']
-                        self.clientSocket.close()
+                        self.sock.close()
                 else:
                     # server returns alert, when no ciphersuits match
                     if "Alert" in cipher:
@@ -270,12 +550,12 @@ class SSLConnection:
             self._doPreHandshake()
 
             try:
-                self.clientSocket.send(pkt)
-                supportedVersion = self._readRecordLayer(self.clientSocket,"ServerVersion")
+                self.sock.send(pkt)
+                supportedVersion = self._readRecordLayer(self.sock,"ServerVersion")
                 if supportedVersion is not None and "Alert" not in supportedVersion:
                     supportedVersions.append(supportedVersion)
                     #print supportedVersion
-                    self.clientSocket.close()
+                    self.sock.close()
 
             except socket.error, msg:
                 raise TLSError("[!] Could not connect to target host")
@@ -291,9 +571,9 @@ class SSLConnection:
         self._doPreHandshake()
 
         try:
-            self.clientSocket.send(pkt)
-            compressionSupported = self._readRecordLayer(self.clientSocket,"Compression")
-            self.clientSocket.close()
+            self.sock.send(pkt)
+            compressionSupported = self._readRecordLayer(self.sock,"Compression")
+            self.sock.close()
             return compressionSupported
 
         except socket.error, msg:
@@ -306,12 +586,12 @@ class SSLConnection:
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:
             self._doPreHandshake()
-            self.clientSocket.send(pkt)
+            self.sock.send(pkt)
             # TODO HACK, get server hello
-            self._readRecordLayer(self.clientSocket, "Certificate")
+            self._readRecordLayer(self.sock, "Certificate")
             #  HACK get certificate
-            certificate = self._readRecordLayer(self.clientSocket, "Certificate")
-            self.clientSocket.close()
+            certificate = self._readRecordLayer(self.sock, "Certificate")
+            self.sock.close()
 
 
             return certificate
@@ -333,8 +613,8 @@ class SSLConnection:
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:
             self._doPreHandshake()
-            self.clientSocket.send(pkt)
-            server_hello = self._readRecordLayer(self.clientSocket, "Extensions")
+            self.sock.send(pkt)
+            server_hello = self._readRecordLayer(self.sock, "Extensions")
 
             if server_hello is None:
                 print "[!] Error in getting Server Hello. Try again later."
@@ -377,4 +657,37 @@ class SSLConnection:
         addr = socket.gethostbyname(self.host)
         self.ip = addr
         return self.ip
+
+    def test(self):
+        cHello = ClientHello()
+        ciphersuite =copy.copy(CipherSuite.all_suites)
+        supportedVersions = []
+
+        ver = (3,1)
+
+        pkt = self._clientHelloPacket(ver, ciphersuite)
+        self._doPreHandshake()
+        try:
+            self.sock.send(pkt)
+            for result in self._getMsg(ContentType.handshake, HandshakeType.server_hello):
+                print result
+                continue
+            serverHello = result
+            # get certificate
+            for result in self._getMsg(ContentType.handshake, HandshakeType.certificate, CertificateType.x509):
+                print result
+                continue
+            serverCertificate = result
+
+        except socket.error, msg:
+            raise TLSError("[!] Could not connect to target host")
+        #print "[!] Could not connect to target host because %s" %msg
+
+
+def main():
+    conn = SSLConnection(host = "google.com",version= (3,1), port = 443)
+    conn.test()
+
+if __name__=="__main__":
+    main()
 

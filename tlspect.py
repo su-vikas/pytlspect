@@ -125,6 +125,44 @@ class TLSpect:
                 if cipherSuitesName:
                     result = "True"
                     return "True"
+
+                else:
+                    result = "False"
+                    return "False"
+                #print "         " + CipherSuite.cipher_suites[cipher_id]['name']
+
+            # self.resultObj.printCipherSuites()
+            # if export rsa supported, website is vulnerable
+
+        except Exception as err:
+            print err
+            results="False"
+            return "False"
+
+    def logjamTest(self, result):
+        """
+        The attack involves use DHE_EXPORT which either uses 512 bits keys.
+        FOr the test, we will check if DHE_EXPORT is enabled for a server or not.
+        @param result: to return the result in case of multiprocessing module
+        """
+        try:
+            # determine ssl versions
+            self.enumerateSSLVersion()
+
+            # run scans for all versions
+            cipherSuite = copy.copy(CipherSuite.logjamTestSuites)
+            for s in self.resultObj.sslVersions:
+                cipherSuitesDetected = self.conn.enumerateCiphers(version = s, customCipherSuite = cipherSuite)
+
+                cipherSuitesName = []
+                for cipher_id in cipherSuitesDetected:
+                    cipherSuitesName.append(CipherSuite.cipher_suites[cipher_id]['name'])
+                    self.resultObj.updateCiphers(s, cipherSuitesName)
+
+                if cipherSuitesName:
+                    result = "True"
+                    return "True"
+
                 else:
                     result = "False"
                     return "False"
@@ -162,6 +200,7 @@ def parse_args():
     parser.add_argument("-P", "--poodle", help="Test for POODLE SSL attack", action="store_true", default=False,dest='poodle_switch')
     parser.add_argument("-H", "--heartbleed", help="Test for Heartbled SSL vulnerability", action="store_true", default=False, dest='heartbleed_switch')
     parser.add_argument("-F", "--freak", help="Test for FREAK SSL vulnerability", action="store_true", default=False, dest='freak_switch')
+    parser.add_argument("-L", "--logjam", help="Test for LOGJAM SSL vulnerability", action="store_true", default=False, dest='logjam_switch')
 
 
     results = parser.parse_args()
@@ -174,6 +213,7 @@ def parse_args():
         else:
             tlspect = TLSpect(host = results.host)
 
+    # CHeck for all TLS Params
     if results.all_param_switch:
         tlspect.getIP()
         tlspect.enumerateSSLVersion()
@@ -183,27 +223,41 @@ def parse_args():
         tlspect.extensionTest()
 
 
+    # Check for TLS ciphers
     if results.ciphers:
         tlspect.enumerateSSLVersion()
         tlspect.enumerateCiphers()
 
+    # Check for TLS versions supported
     if results.tls_versions:
         tlspect.enumerateSSLVersion()
 
+    # Check for compression
     if results.compress:
         tlspect.isCompression()
 
+    # TODO
     if results.weak_ciphers:
         pass
 
+    # check for certificate chain
     if results.cert_chain or results.cert_detail:
         tlspect.certificateTest()
 
+    # check for poodle
     if results.poodle_switch:
         poodleTest(host, version)
 
+    # check for freak
     if results.freak_switch:
+        result = None
         print tlspect.freakTest(result)
+
+    # check for logjam
+    if results.logjam_switch:
+        result = None
+        print tlspect.logjamTest(result)
+
 
 def main(argv):
     # launchFreak()

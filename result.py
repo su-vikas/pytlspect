@@ -7,15 +7,23 @@ class Result:
         self.host = host
         self.IP = IP
         self.isSSLV3 = False
-        self.isTLSV1 = False
-        self.isTLSV2 = False
-        self.isTLSV3 = False
+        self.isCompressionSSLV3  = False
+        self.extensionsSSLV3 = {}
 
-        self.sslVersions = None         # tls versions supported
-        self.maxSSLVersion = None
+        self.isTLSV10 = False
+        self.isCompressionTLSV10 = False
+        self.extensionsTLSV10 = {}
+
+        self.isTLSV11 = False
+        self.isCompressionTLSV11 = False
+        self.extensionsTLSV11 = {}
+
+        self.isTLSV12 = False
+        self.isCompressionTLSV12 = False
+        self.extensionsTLSV12 = {}
+
         self.supportedCiphers = None    # a dictionary {'version':'[cipher list]'}
         self.weakCiphers = None         # list of weak ciphers
-        self.isCompression = None       # is compression supported.
 
         # certificate chain
         self.certChainLength = None
@@ -25,21 +33,37 @@ class Result:
         self.isHeartbleed = None
         self.isCCS =  None
 
-    def __str__(self):
-        if self.sslVersions:
-            self.printSSLVersions
+    def output(self):
+        TLSVersion = "[+] TLS versions supported: "
+        if self.isSSLV3:
+            TLSVersion += "SSLv3"
+        if self.isTLSV10:
+            TLSVersion += " TLSv1.0"
+        if self.isTLSV11:
+            TLSVersion += " TLSv1.1"
+        if self.isTLSV12:
+            TLSVersion += " TLSv1.2"
 
-        if self.supportedCiphers:
-            self.printCipherSuites
+        print TLSVersion
 
-        if self.isCompression:
-            if compression is None:
-                print "[-] Error in getting compression value"
-            else:
-                if compression == 0:
-                    print "\n[+] COMPRESSION SUPPORT: No"
-                else:
-                    print "\n[+] COMPRESSION SUPPORT: Yes"
+        if self.isCompressionSSLV3 or self.isCompressionTLSV10 or \
+                self.isCompressionTLSV11 or self.isCompressionTLSV12:
+            print "\n[+] COMPRESSION SUPPORT: Yes"
+        else:
+            print "\n[+] COMPRESSION SUPPORT: No"
+
+        print "[+] EXTENSIONS Supported: "
+        if self.extensionsSSLV3:
+            print "     SSLv3: ", str(self.extensionsSSLV3)
+
+        if self.extensionsTLSV10:
+            print "     TLSv1.0: ", str(self.extensionsTLSV10)
+
+        if self.extensionsTLSV11:
+            print "     TLSv1.1: ", str(self.extensionsTLSV11)
+
+        if self.extensionsTLSV12:
+            print "     TLSv1.2: ", str(self.extensionsTLSV12)
 
     def updateCiphers(self, version, cipherSuitesDetected):
         """ updates the dictionary object mapping ssl versions detected and

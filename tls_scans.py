@@ -1,129 +1,125 @@
 from handshake_settings import HandshakeSettings
 from ssl_connection import SSLConnection
+from utils.constants import SSLVersions
+from cert_checker import CertChecker
+from result import Result
+from errors import *
 
 class TLSScans(object):
     """
         Encapsulates all the scans to be performed.
     """
 
-    def __init__(self, host):
+    def __init__(self, host, result):
         self.settings = HandshakeSettings(host)
+        self.result = result
 
-    def _getSSLVersion(self, settings):
+        self.isCertificate = False     # to maintain state if certificates has been parsed.
+
+    def startHandshake(self, settings):
         """
             Checks if the sslv3 supported by the remote server.
         """
-        try:
-            connection = SSLConnection(settings)
-            connection.startHandshake(settings)
-            return True
-        except:
-            #TODO catch the exceptions explicitly
-            return False
+        connection = SSLConnection(settings)
+        result = connection.startHandshake(settings)
+        return result
 
-    def enumerateSSLVersions(self):
+    def _parseExtensions(self, serverHello):
+        extensions = {}
+        if serverHello.next_protos:
+            extensions['next_protocol_negotiation'] = [e for e in serverHello.next_protos]
+        if serverHello.server_name:
+            extensions['server_name'] = True
+        if serverHello.tackExt:
+            extensions['tack'] = True
+        if serverHello.renegotiation_info:
+            extensions['renegotiation_info'] = True
+        if serverHello.heartbeat:
+            extensions['Heartbeat'] = True
+        if serverHello.ocsp:
+            extensions['status_request'] = True
+        if serverHello.session_ticket:
+            extensions['SessionTicket TLS'] = True
+        if serverHello.ec_point_formats:
+            extensions['ec_point_formats'] = True
+
+        return extensions
+
+    def _parseCertificate(self, serverCertificate):
+
+        if not self.isCertificate:
+            checker = CertChecker(self.settings.host, serverCertificate)
+            checker.checkExpiryDate()
+            self.result.certChain = serverCertificate
+
+            self.isCertificate = True
+
+    def getSSLV3Params(self):
         """
-            Enumerate all the TLS/SSL versions supported by the remote server.
+            Gets all the parameters for SSLv3.
         """
-        print self.settings.host
-        self.settings.version = (3,0)
-        sslv3 = self._getSSLVersion(self.settings)
-        print sslv3
-
-        self.settings.version = (3,1)
-        tlsv10 = self._getSSLVersion(self.settings)
-        print tlsv10
-
-        self.settings.version = (3,2)
-        tlsv11 = self._getSSLVersion(self.settings)
-        print tlsv11
-
-        self.settings.version = (3,3)
-        tlsv12 = self._getSSLVersion(self.settings)
-        print tlsv12
-
-    def isCompressionSupported(self):
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        version=(3,1)
-        pkt = self._clientHelloPacket(version, ciphersuite)
-        self._doPreHandshake()
-
+        self.settings.version = SSLVersions.SSLV3
         try:
-            self.clientSocket.send(pkt)
-            compressionSupported = self._readRecordLayer(self.clientSocket,"Compression")
-            self.clientSocket.close()
-            return compressionSupported
+            result = self.startHandshake(self.settings)
+            if result:
+                serverHello, serverCertificate = result
+                self.result.isCompressionSSLV3 = serverHello.compression_method
+                if self.settings.version == serverHello.server_version:
+                    self.result.isSSLV3 = True
 
-        except socket.error, msg:
-            raise TLSError("[!] Could not connect to target host")
-            #print "[!] Could not connect to target host because %s" %msg
+                self.result.extensionsSSLV3 = self._parseExtensions(serverHello)
 
-    def scanCertificates(self, version):
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        pkt = self._clientHelloPacket(version, ciphersuite)
-        try:
-            self._doPreHandshake()
-            self.clientSocket.send(pkt)
-            # TODO HACK, get server hello
-            self._readRecordLayer(self.clientSocket, "Certificate")
-            #  HACK get certificate
-            certificate = self._readRecordLayer(self.clientSocket, "Certificate")
-            self.clientSocket.close()
-            return certificate
+                self._parseCertificate(serverCertificate)
+        except TLSRemoteAlert:
+            #TODO add logging.
+            pass
 
-        except socket.gaierror, msg:
-            raise TLSError("[!] Could not connect to target host, check whether the domain entered is correct")
+    def getTLSV10Params(self):
+        """
+            Gets all the parameters for SSLv3.
+        """
+        self.settings.version = SSLVersions.TLSV10
+        result = self.startHandshake(self.settings)
+        if result:
+            serverHello, serverCertificate = result
+            self.result.isCompressionTLSV10 = serverHello.compression_method
+            if self.settings.version == serverHello.server_version:
+                self.result.isTLSV10 = True
 
-        except socket.error, msg:
-            raise TLSError("[!] Could not connect to target host")
-        except SyntaxError as err:
-            raise TLSError("[!] Could not connect to target host")
+            self.result.extensionsTLSV10 = self._parseExtensions(serverHello)
+            self._parseCertificate(serverCertificate)
 
-    def supportedExtensions(self):
-        # Check for all supported extensions
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        #TODO fix the version usage
-        version=(3,1)
-        pkt = self._clientHelloPacket(version, ciphersuite)
-        try:
-            self._doPreHandshake()
-            self.clientSocket.send(pkt)
-            server_hello = self._readRecordLayer(self.clientSocket, "Extensions")
+    def getTLSV11Params(self):
+        """
+        """
+        self.settings.version = SSLVersions.TLSV11
+        result = self.startHandshake(self.settings)
+        if result:
+            serverHello, serverCertificate = result
+            self.result.isCompressionTLSV11 = serverHello.compression_method
+            if self.settings.version == serverHello.server_version:
+                self.result.isTLSV11 = True
 
-            if server_hello is None:
-                print "[!] Error in getting Server Hello. Try again later."
-            else:
-                print "\n[*] TLS EXTENSIONS SUPPORTED"
-                if server_hello.next_protos:
-                    print "[+] Next protocol negotiation supported:"
-                    for e in server_hello.next_protos:
-                        print "     [+]",e
-                if server_hello.server_name:
-                    print "[+] SNI Supported"
-                if server_hello.tackExt:
-                    print "[+] Tack supported"
-                if server_hello.renegotiation_info:
-                    print "[+] Renegotiation supported"
-                if server_hello.heartbeat:
-                    print "[+] Heartbeat supported"
-                if server_hello.ocsp:
-                    print "[+] OCSP stapling supported"
-                if server_hello.session_ticket:
-                    print "[+] Session Ticket TLS supported"
-                if server_hello.ec_point_formats:
-                    print "[+] Ec Point formats supported"
+            self.result.extensionsTLSV11 = self._parseExtensions(serverHello)
+            self._parseCertificate(serverCertificate)
 
-        except socket.gaierror, msg:
-            print "[!] Check whether website exists. Error:%s" %msopenhage
+    def getTLSV12Params(self):
+        self.settings.version = SSLVersions.TLSV12
+        result = self.startHandshake(self.settings)
+        if result:
+            serverHello, serverCertificate = result
+            self.result.isCompressionTLSV12 = serverHello.compression_method
+            if self.settings.version == serverHello.server_version:
+                self.result.isTLSV12 = True
 
-        except socket.error, msg:
-            print "[!] Could not connect to target host because %s" %msg
-            return None
-        except SyntaxError:
-            print "[!] Error in fetching certificate, try again later"
+            self.result.extensionsTLSV12 = self._parseExtensions(serverHello)
+            self._parseCertificate(serverCertificate)
+
+    def getAllParams(self):
+        self.getSSLV3Params()
+        self.getTLSV10Params()
+        self.getTLSV11Params()
+        self.getTLSV12Params()
 
     def getIP(self):
         addr = socket.gethostbyname(self.host)
@@ -136,8 +132,12 @@ class TLSScans(object):
         return self.ip
 
 def main():
-    scan = TLSScans("www.google.com")
-    scan.enumerateSSLVersions()
+    host = "www.facebook.com"
+    result = Result(host)
+    scan = TLSScans(host, result)
+    scan.getAllParams()
+    result.output()
+    result.printCertificates()
 
 if __name__ == "__main__":
     main()

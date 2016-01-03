@@ -6,6 +6,11 @@ class Result:
     def __init__(self, host=None, IP= None):
         self.host = host
         self.IP = IP
+        self.isSSLV3 = False
+        self.isTLSV1 = False
+        self.isTLSV2 = False
+        self.isTLSV3 = False
+
         self.sslVersions = None         # tls versions supported
         self.maxSSLVersion = None
         self.supportedCiphers = None    # a dictionary {'version':'[cipher list]'}

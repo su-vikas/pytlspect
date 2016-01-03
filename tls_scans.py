@@ -1,102 +1,46 @@
+from handshake_settings import HandshakeSettings
+from ssl_connection import SSLConnection
 
 class TLSScans(object):
     """
         Encapsulates all the scans to be performed.
     """
 
-    def enumerateCiphers(self, version, customCipherSuite = None):
-        cipherSuitesDetected = []
-        cHello = ClientHello()
-        cipher_accepted = None
-        cipherSuite = None
-        if customCipherSuite:
-            cipherSuite = copy.copy(customCipherSuite)
-        else:
-            cipherSuite =copy.copy(CipherSuite.all_suites)
+    def __init__(self, host):
+        self.settings = HandshakeSettings(host)
 
-        #get the ciphersuites supported in preference order
-        while len(cipherSuite) > 0:
-            pkt = self._clientHelloPacket(version, cipherSuite)
-            self._doPreHandshake()
-            try:
-                self.clientSocket.send(pkt)
-                cipher = self._readRecordLayer(self.clientSocket, None)
-                if cipher in cipherSuite :
-                    cipher_accepted = cipher
-                    cipher_id = '%06x' % cipher
-                    cipher_id = cipher_id.upper() # all names in upper case in constants.py
-                    cipherSuite.remove(cipher_accepted)
-                    #print len(ciphersuite)
-                    if CipherSuite.cipher_suites.has_key(cipher_id):
-                        cipherSuitesDetected.append(cipher_id)
-                        #print CipherSuite.cipher_suites[cipher_id]['name']
-                        self.clientSocket.close()
-                else:
-                    # server returns alert, when no ciphersuits match
-                    if "Alert" in cipher:
-                        break
-
-                    elif cipher is not None:
-                        raise TLSError("[!] Server returned cipher not in ciphersuite")
-                    break
-
-
-            except socket.error, msg:
-                raise TLSError("[!] Could not connect to target host")
-
-        return cipherSuitesDetected
-
-    # VERSION TESTS
-    def _checkSSLVersion(self):
-        """
-            Send the client hello message.
-        """
-        try:
-            # TODO fix the supported version issue
-            self.clientSocket.send(pkt)
-            supportedVersion = self._readRecordLayer(self.clientSocket,"ServerVersion")
-            if supportedVersion is not None and "Alert" not in supportedVersion:
-                return supportedVersion
-                #print supportedVersion
-                self.clientSocket.close()
-        except socket.error, msg:
-            raise TLSError("[!] Could not connect to target host")
-
-    def _isSSLV3Supported(self):
+    def _getSSLVersion(self, settings):
         """
             Checks if the sslv3 supported by the remote server.
         """
-        settings = HandshakeSettings()
-        settings.maxVersion = (3,0)
-        settings.minVersion = (3,0)
-        # TODO fix this. Only send minimum suites to reduce bandwidth
-        settings.cipherSuites = copy.copy(CipherSuite.all_suites)
-
+        try:
+            connection = SSLConnection(settings)
+            connection.startHandshake(settings)
+            return True
+        except:
+            #TODO catch the exceptions explicitly
+            return False
 
     def enumerateSSLVersions(self):
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        supportedVersions = []
+        """
+            Enumerate all the TLS/SSL versions supported by the remote server.
+        """
+        print self.settings.host
+        self.settings.version = (3,0)
+        sslv3 = self._getSSLVersion(self.settings)
+        print sslv3
 
-        sslVersions = [(3,0),(3,1),(3,2),(3,3)]
-        #loop for ssl versions
-        for ver in sslVersions:
-            pkt = self._clientHelloPacket(ver, ciphersuite)
-            self._doPreHandshake()
+        self.settings.version = (3,1)
+        tlsv10 = self._getSSLVersion(self.settings)
+        print tlsv10
 
-            try:
-                self.clientSocket.send(pkt)
-                supportedVersion = self._readRecordLayer(self.clientSocket,"ServerVersion")
-                if supportedVersion is not None and "Alert" not in supportedVersion:
-                    supportedVersions.append(supportedVersion)
-                    #print supportedVersion
-                    self.clientSocket.close()
+        self.settings.version = (3,2)
+        tlsv11 = self._getSSLVersion(self.settings)
+        print tlsv11
 
-            except socket.error, msg:
-                raise TLSError("[!] Could not connect to target host")
-                #print "[!] Could not connect to target host because %s" %msg
-
-        return supportedVersions
+        self.settings.version = (3,3)
+        tlsv12 = self._getSSLVersion(self.settings)
+        print tlsv12
 
     def isCompressionSupported(self):
         cHello = ClientHello()
@@ -127,8 +71,6 @@ class TLSScans(object):
             #  HACK get certificate
             certificate = self._readRecordLayer(self.clientSocket, "Certificate")
             self.clientSocket.close()
-
-
             return certificate
 
         except socket.gaierror, msg:
@@ -192,4 +134,11 @@ class TLSScans(object):
         addr = socket.gethostbyname(self.host)
         self.ip = addr
         return self.ip
+
+def main():
+    scan = TLSScans("www.google.com")
+    scan.enumerateSSLVersions()
+
+if __name__ == "__main__":
+    main()
 

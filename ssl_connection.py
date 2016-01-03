@@ -49,43 +49,112 @@ BYTE 5 in the record has the following handhsake type values:
 
 class SSLConnection:
     #TODO test for versions supported
-    def __init__(self,host,version,port = 443,timeout = 5.0):
+    def __init__(self, settings):
         self.sock = None
+        self.host = settings.host
+        self.port = settings.port
+        self.timeout = settings.timeout
+        self.ips = []
+
+        # TO maintain state
         self.isClientHello = False
         self.isServerHello = False
         self.isServerCertificate = False
         self.isServerHelloDone = False
-        self.host = host
-        self.port = port
-        self.timeout = timeout
-        self.ip = None
 
         # To make tlslite functions work over here.
         self._handshakeBuffer = []
         self._client = True
 
-    def _doPreHandshake(self):
+    def _initSocket(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         self.sock.settimeout(self.timeout)
 
-    def _clientHelloPacket(self, version, ciphersuite):
+    def _clientHelloPacket(self, settings):
         cHello = ClientHello()
         session = bytearray(0)
-        if ciphersuite is None:
-            ciphersuite =copy.copy(CipherSuite.all_suites)
+        if settings.cipherSuites is None:
+            cipherSuite =copy.copy(CipherSuite.all_suites)
+        else:
+            cipherSuite = settings.cipherSuites
 
-        cHello.create(version, getRandomBytes(32), session, ciphersuite, serverName = self.host, tack = True, supports_npn = True,
-                heartbeat = True, ocsp =True, session_ticket = True, elliptic_curves = True, ec_point_formats = True)
-
+        cHello.create(settings.version, getRandomBytes(32), session,\
+                cipherSuite, serverName = self.host, tack=settings.tack, \
+                supports_npn=settings.supports_npn , heartbeat=settings.heartbeat, \
+                ocsp=settings.ocsp, session_ticket=settings.session_ticket, \
+                elliptic_curves=settings.elliptic_curves, ec_point_formats=settings.ec_point_formats)
         p = bytearray()
         p = cHello.write()
-        recordHeader = RecordHeader3().create(version, ContentType.handshake, len(p))
+        recordHeader = RecordHeader3().create(settings.version, ContentType.handshake, len(p))
         pkt = recordHeader.write() + p
         return pkt
 
+    def startHandshake(self, settings):
+        """
+            Starts the handshake process. Sends the client hello and waits for server response.
+        """
+        try:
+            cHello = ClientHello()
+            cipherSuite = CipherSuite.poodleTestSuites
+            self._initSocket()
+            pkt = self._clientHelloPacket(settings)
+            self.sock.send(pkt)
+
+            # check for server hello
+            for result in self._getMsg(ContentType.handshake, HandshakeType.server_hello):
+                # TODO what are possible results returned.
+                continue
+            serverHello = result
+
+            # get server certificate
+            for result in self._getMsg(ContentType.handshake, HandshakeType.certificate, CertificateType.x509):
+                # TODO what are possible results returned.
+                continue
+            serverCertificate = result
+
+        # TODO close the connection
+        except socket.error, msg:
+            raise TLSError("[!] Could not connect to target host")
+
+        except socket.gaierror, msg:
+            raise #TODO did for poodle
+
+    def doClientHello(self, host, version):
+        """
+        struct {
+            ProtocolVersion client_version;
+            Random random;
+            SessionID session_id;
+            CipherSuite cipher_suites<2..2^16-1>;
+            CompressionMethod compression_methods<1..2^8-1>;
+            Extension extensions<0..2^16-1>;
+            } ClientHello;
+
+        """
+        try:
+            cHell0 = ClientHello()
+            ciphersuite = CipherSuite.poodleTestSuites
+            pkt = self._clientHelloPacket(version,ciphersuite)
+            self._initSocket()
+            self.sock.send(pkt)
+
+            # read the packet
+            returned_value = self._readRecordLayer(self.sock, None)
+            if returned_value is "Alert":
+                return "Alert"
+            else:
+                return "Supported"
+
+        except socket.error, msg:
+            #TODO handle errors for timeout
+            raise
+            #print "[!] Could not connect to target host because %s" %msg
+            #TODO return or exit or escalate the exception
+        except socket.gaierror, msg:
+            raise #TODO did for poodle
+
     def _getMsg(self, expectedType, secondaryType=None, constructorType=None):
-        print expectedType
         try:
             if not isinstance(expectedType, tuple):
                 expectedType = (expectedType,)
@@ -107,7 +176,6 @@ class SSLConnection:
                         continue
 
                 #If we received an unexpected record type...
-                print recordHeader.type, expectedType
                 if recordHeader.type not in expectedType:
 
                     #If we received an alert...
@@ -461,39 +529,6 @@ class SSLConnection:
                 break
         return
 
-    def doClientHello(self, host, version):
-        """
-        struct {
-            ProtocolVersion client_version;
-            Random random;
-            SessionID session_id;
-            CipherSuite cipher_suites<2..2^16-1>;
-            CompressionMethod compression_methods<1..2^8-1>;
-            Extension extensions<0..2^16-1>;
-            } ClientHello;
-
-        """
-        try:
-            cHell0 = ClientHello()
-            ciphersuite = CipherSuite.poodleTestSuites
-            pkt = self._clientHelloPacket(version,ciphersuite)
-            self._doPreHandshake()
-            self.sock.send(pkt)
-
-            # read the packet
-            returned_value = self._readRecordLayer(self.sock, None)
-            if returned_value is "Alert":
-                return "Alert"
-            else:
-                return "Supported"
-
-        except socket.error, msg:
-            #TODO handle errors for timeout
-            raise
-            #print "[!] Could not connect to target host because %s" %msg
-            #TODO return or exit or escalate the exception
-        except socket.gaierror, msg:
-            raise #TODO did for poodle
             #print "[!] Check whether website exists. Error:%s" %msg
 
     def enumerateCiphers(self, version, customCipherSuite = None):
@@ -509,7 +544,7 @@ class SSLConnection:
         #get the ciphersuites supported in preference order
         while len(cipherSuite) > 0:
             pkt = self._clientHelloPacket(version, cipherSuite)
-            self._doPreHandshake()
+            self._initSocket()
             try:
                 self.sock.send(pkt)
                 cipher = self._readRecordLayer(self.sock, None)
@@ -547,7 +582,7 @@ class SSLConnection:
         #loop for ssl versions
         for ver in sslVersions:
             pkt = self._clientHelloPacket(ver, ciphersuite)
-            self._doPreHandshake()
+            self._initSocket()
 
             try:
                 self.sock.send(pkt)
@@ -568,7 +603,7 @@ class SSLConnection:
         ciphersuite =copy.copy(CipherSuite.all_suites)
         version=(3,1)
         pkt = self._clientHelloPacket(version, ciphersuite)
-        self._doPreHandshake()
+        self._initSocket()
 
         try:
             self.sock.send(pkt)
@@ -585,7 +620,7 @@ class SSLConnection:
         ciphersuite =copy.copy(CipherSuite.all_suites)
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:
-            self._doPreHandshake()
+            self._initSocket()
             self.sock.send(pkt)
             # TODO HACK, get server hello
             self._readRecordLayer(self.sock, "Certificate")
@@ -612,7 +647,7 @@ class SSLConnection:
         version=(3,1)
         pkt = self._clientHelloPacket(version, ciphersuite)
         try:
-            self._doPreHandshake()
+            self._initSocket()
             self.sock.send(pkt)
             server_hello = self._readRecordLayer(self.sock, "Extensions")
 
@@ -666,7 +701,7 @@ class SSLConnection:
         ver = (3,1)
 
         pkt = self._clientHelloPacket(ver, ciphersuite)
-        self._doPreHandshake()
+        self._initSocket()
         try:
             self.sock.send(pkt)
             for result in self._getMsg(ContentType.handshake, HandshakeType.server_hello):
@@ -685,7 +720,7 @@ class SSLConnection:
 
 
 def main():
-    conn = SSLConnection(host = "google.com",version= (3,1), port = 443)
+    conn = SSLConnection(host="google.com",version= (3,1), port = 443)
     conn.test()
 
 if __name__=="__main__":

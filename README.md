@@ -1,6 +1,8 @@
-TLSpect
+pyTLSpect
 =========
-A SSL/TLS scanner written in python. The aim of the project to replicate ssllabs SSL analysis tool. The core code of the project is heavily borrowed from TLSlite project (https://github.com/trevp/tlslite).
+pyTLSpect is a SSL/TLS scanner written purely in Python. The project was started to learn about internals of SSL/TLS, and implementing SSL/TLS is the best way to learn the nitty-gritties of it. I am trying to emulate Qualys SSLLabs analysis tool. Although there are many other much mature and advance tools available to do the same, to name a few: sslyze (https://github.com/iSECPartners/sslyze), sslscan (https://github.com/rbsec/sslscan ) and many others. 
+
+TLSlite project (https://github.com/trevp/tlslite) is used as the base to start with and critical part is borrowed/inspired from the project. 
 
 At present the TLSpect can perform following analysis:
 
@@ -10,37 +12,26 @@ At present the TLSpect can perform following analysis:
 * SSL/TLS extensions supported
 * Test for POODLE
 
-and some other features. Other features envisaged are on the lines of ssllabs tool. 
-
-Presently, the code is still work under progess and hence not stable yet. Some crashes are still observed here and there.
-
+Still the tool is underdevelopment. Please go through the TODO list if you want to contribute. 
 USAGE
 -------
-Currently, it cannot be installed. It should be used directly as a script. 
 
 To scan a HTTPS website:
-usage: tlspect.py [-h] -d HOST [-p PORT] [-a] [-v VERSION] [-c] [-z] [-t] [-w]
-                  [-C] [-s] [-e] [-P] [-H]
+usage: tlspect.py [-h] -d HOST [-p PORT] [-a] [-P] [-H] [-F] [-L]
 
 Scan for various TLS configurations
 
 optional arguments:
+  -h, --help            show this help message and exit
+  -d HOST, --domain HOST
+                        The hostname to be scanned for
+  -p PORT, --port PORT  Port number to scan at, defaults to 443
+  -a, --all             Scan for all parameters
+  -P, --poodle          Test for POODLE SSL attack
+  -H, --heartbleed      Test for Heartbled SSL vulnerability
+  -F, --freak           Test for FREAK SSL vulnerability
+  -L, --logjam          Test for LOGJAM SSL vulnerability
 
-* -h, --help            show this help message and exit
-* -d HOST, --domain HOST
-*                       The hostname to be scanned for
-* -p PORT, --port PORT  Port number to scan at, defaults to 443
-* -a, --all             Scan for all parameters
-* -v VERSION, --version VERSION
-*                       SSL version to scan for
-* -c, --ciphers         Scan only for ciphers supported
-* -z, --compression     Scan only for if compression supported
-* -t, --tls-versions    Scan only for supported TLS versions
-* -w, --weak-ciphers    Report potentially weak ciphers only
-* -C, --cert            Show certificate details
-* -s, --cert-chain      Show certificate chain details
-* -e, --tls-ext         Show supported TLS extensions
-* -P, --poodle          Test for Poodle SSL attack
 
 REQUIREMENTS
 -------------

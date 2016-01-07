@@ -9,6 +9,12 @@
 
 """Constants used in various places."""
 
+class SSLVersions:
+    SSLV3 = (3,0)
+    TLSV10 = (3,1)
+    TLSV11 = (3,2)
+    TLSV12 = (3,3)
+
 class CertificateType:
     x509 = 0
     openpgp = 1

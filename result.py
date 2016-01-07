@@ -39,6 +39,7 @@ class Result(object):
         self.printCompression()
         self.printTLSExtensions()
         self.printCertificates()
+        self.printPoodle()
 
     def updateCiphers(self, version, cipherSuitesDetected):
         """
@@ -125,6 +126,14 @@ class Result(object):
         print "[+] HOST:", self.host
         print "[+] IP:", self.IP, "\n"
 
+    def printPoodle(self):
+        """
+            Prints results for POODLE.
+        """
+        if self.isPoodle:
+            print "[*] Vulnerable to SSLv3 POODLE: Yes"
+        else:
+            print "[*] Vulnerable to SSLv3 POODLE: No"
 
 class MetaResult(object):
     """

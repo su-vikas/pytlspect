@@ -1,41 +1,51 @@
+FIXED:
+----------------------------------
+- improved TLS packet parsing
+- separate object to handle settings
+- Reduce the minimum number of connections required to scan information. Compression, extension etc information is collected in one connection
+
+BUGS:
+-----
+- crashing for 4shared.com (FIXED)
+
+
 FEATURES (not in priority order):
 ---------------------------------
+- RC4 and weak ciphers
+- INclude CVE numbers
+- KCI attack on SSl
 - determine all IPs of a given host
 - validity of certificates
 - add support for sslv2
 - report result in json as well. 
-- Reduce the minimum number of connections required to scan information. Compression etc information can be collected in one connection
-- improve TLS packet parsing
-- handle case when server hello and certificate come in same packet
 - some superflous files for x509 parsing. keyfactory.py pem.py pycrypto_rsakey.py python_rsakey.py rsakey.py tackwrapper.py
-- Error in parsing certs for certain sites like facebook.com. Also, sometime for working site also get an exception
-- fetching certificate packet is kind of hack. Make it more elegant 
 - Message if website does not support TLS. 
 - Add documentation
 - Use multiprocessing to make things fast
-
--> FROM SSLLABS:
-- secure renegotation
-- BEAST attack
-- POODLE sslv3
-- POODLE TLS
-- Downgrade attack prevention
-- heartbleed
-- CCS
-- Forward secrecy
-- session resumption (caching)
-- session resumption (tickets)
-- OCSP stapling
-- HSTS
-- Public Key Pinning (HPKP)
-- long handshake intolerance
-- TLS extension intolerance
-- tls version intolerance
-- ssl 2 handshake compatibility
-- handshake simulation
-
-
 - Test duration
+- common DH primes
+- TLS_SCSV_FALLBACK support to prevent downgrade attacks.
+
+
+    -> FROM SSLLABS:
+    - secure renegotation
+    - BEAST attack
+    - POODLE TLS
+    - Downgrade attack prevention
+    - heartbleed
+    - CCS
+    - Forward secrecy
+    - session resumption (caching)
+    - session resumption (tickets)
+    - OCSP stapling
+    - HSTS
+    - Public Key Pinning (HPKP)
+    - long handshake intolerance
+    - TLS extension intolerance
+    - tls version intolerance
+    - ssl 2 handshake compatibility
+    - handshake simulation
+
 
 
 TESTING:
@@ -44,9 +54,6 @@ TESTING:
 - Run pylint
 - Run timing tests to optimize performance 
 
-BUGS:
------
-- crashing for 4shared.com
 
 FUTURAMA:
 ---------

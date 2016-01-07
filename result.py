@@ -1,4 +1,4 @@
-class Result:
+class Result(object):
     """
     For storing results, parameters like IP, ciphersuits etc and print in desired
     format.
@@ -66,8 +66,10 @@ class Result:
             print "     TLSv1.2: ", str(self.extensionsTLSV12)
 
     def updateCiphers(self, version, cipherSuitesDetected):
-        """ updates the dictionary object mapping ssl versions detected and
-        correspdonding ciphersDetected"""
+        """
+            updates the dictionary object mapping ssl versions detected and
+            correspdonding ciphersDetected
+        """
         if not self.supportedCiphers:
             self.supportedCiphers = {}
 
@@ -120,4 +122,13 @@ class Result:
             for x in self.certChain.certChain.x509List:
                  x.print_cert()
 
+
+class MetaResult(object):
+    """
+        Class encapsulates the meta information about the scan.
+    """
+    def __init__(self):
+        self.startTime = None
+        self.stopTime = None
+        self.countConnections = None
 

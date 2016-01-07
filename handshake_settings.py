@@ -9,11 +9,11 @@ class HandshakeSettings(object):
         self.timeout = 5.0
 
         # TLS Settings
-        self.minKeySize = 1023
-        self.maxKeySize = 8193
-        self.cipherSuites = None
-        self.certificateTypes = None
-        self.version = (3,0)
+        self.minKeySize         = 1023
+        self.maxKeySize         = 8193
+        self.cipherSuites       = None
+        self.certificateTypes   = None
+        self.version            = (3,0)
 
         # TLS Extensions
         self.tack               = True

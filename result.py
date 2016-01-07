@@ -3,6 +3,7 @@ class Result(object):
     For storing results, parameters like IP, ciphersuits etc and print in desired
     format.
     """
+
     def __init__(self, host=None, IP= None):
         self.host = host
         self.IP = IP
@@ -34,36 +35,10 @@ class Result(object):
         self.isCCS =  None
 
     def output(self):
-        TLSVersion = "[+] TLS versions supported: "
-        if self.isSSLV3:
-            TLSVersion += "SSLv3"
-        if self.isTLSV10:
-            TLSVersion += " TLSv1.0"
-        if self.isTLSV11:
-            TLSVersion += " TLSv1.1"
-        if self.isTLSV12:
-            TLSVersion += " TLSv1.2"
-
-        print TLSVersion
-
-        if self.isCompressionSSLV3 or self.isCompressionTLSV10 or \
-                self.isCompressionTLSV11 or self.isCompressionTLSV12:
-            print "\n[+] COMPRESSION SUPPORT: Yes"
-        else:
-            print "\n[+] COMPRESSION SUPPORT: No"
-
-        print "[+] EXTENSIONS Supported: "
-        if self.extensionsSSLV3:
-            print "     SSLv3: ", str(self.extensionsSSLV3)
-
-        if self.extensionsTLSV10:
-            print "     TLSv1.0: ", str(self.extensionsTLSV10)
-
-        if self.extensionsTLSV11:
-            print "     TLSv1.1: ", str(self.extensionsTLSV11)
-
-        if self.extensionsTLSV12:
-            print "     TLSv1.2: ", str(self.extensionsTLSV12)
+        self.printSSLVersions()
+        self.printCompression()
+        self.printTLSExtensions()
+        self.printCertificates()
 
     def updateCiphers(self, version, cipherSuitesDetected):
         """
@@ -80,6 +55,29 @@ class Result(object):
         else:
             self.supportedCiphers[version] += cipherSuitesDetected
 
+    def printSSLVersions(self):
+        """
+            print ssl versions detected to stdout
+        """
+        TLSVersion = "[*] TLS versions supported: "
+        if self.isSSLV3:
+            TLSVersion += "SSLv3"
+        if self.isTLSV10:
+            TLSVersion += " TLSv1.0"
+        if self.isTLSV11:
+            TLSVersion += " TLSv1.1"
+        if self.isTLSV12:
+            TLSVersion += " TLSv1.2"
+
+        print TLSVersion
+
+    def printCompression(self):
+        if all(x > 0 for x in (self.isCompressionSSLV3, self.isCompressionTLSV10, \
+                self.isCompressionTLSV11, self.isCompressionTLSV12)):
+            print "\n[*] COMPRESSION SUPPORT: Yes"
+        else:
+            print "\n[*] COMPRESSION SUPPORT: No"
+
     def printCipherSuites(self):
         if not self.supportedCiphers:
             print "[+] No ciphers scanned for "
@@ -91,36 +89,41 @@ class Result(object):
                     for c in value:
                         print "         " + c
 
-    def printSSLVersions(self):
-        """ print ssl versions detected to stdout"""
+    def printTLSExtensions(self):
+        """
+            Print TLS Extensions supported.
+        """
+        print "\n[*] TLS EXTENSIONS Supported: "
+        if self.extensionsSSLV3:
+            for key, value in self.extensionsSSLV3.iteritems():
+                print "     SSLv3: ", str(key)
+            print "\n"
 
-        print "\n[+] SSL VERSIONS SUPPORTED:"
-        if len(self.sslVersions)> 0:
-            for ver in self.sslVersions:
-                print "     ",ver
-        else:
-            print "No version detected strangely"
+        if self.extensionsTLSV10:
+            for key, value in self.extensionsTLSV10.iteritems():
+                print "     TLSv1.0: ", str(key)
+            print "\n"
+
+        if self.extensionsTLSV11:
+            for key, value in self.extensionsTLSV11.iteritems():
+                print "     TLSv1.1: ", str(key)
+            print "\n"
+
+        if self.extensionsTLSV12:
+            for key, value in self.extensionsTLSV12.iteritems():
+                print "     TLSv1.2: ", str(key)
+            print "\n"
+
+    def printCertificates(self):
+        print "[*] CERTIFICATE CHAIN \n"
+        if self.certChain:
+            for x in self.certChain.certChain.x509List:
+                 x.print_cert()
 
     def printIP(self):
         """ print IP for the host """
         print "[+] HOST:", self.host
         print "[+] IP:", self.IP, "\n"
-
-    def printCompression(self):
-        if self.isCompression is None:
-            print "[-] Error in getting compression value"
-        else:
-            if self.isCompression == 0:
-                print "\n[+] COMPRESSION SUPPORT: No"
-            else:
-                print "\n[+] COMPRESSION SUPPORT: Yes"
-        print " \n "
-
-    def printCertificates(self):
-        print "[*] CERTIFICATE CHAIN"
-        if self.certChain:
-            for x in self.certChain.certChain.x509List:
-                 x.print_cert()
 
 
 class MetaResult(object):

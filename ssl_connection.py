@@ -10,45 +10,44 @@ from messages import *
 
 #TLS/SSL handshake RFC2246 pg 31
 """
-Format of an SSL record
-Byte 0 = SSL record type
-Bytes 1-2   = SSL version (major/minor)
-Bytes 3-4   = Length of data in the record (excluding the header itself). The maximum SSL supports is 16384 (16K).
+    Format of an SSL record
+    Byte 0 = SSL record type
+    Bytes 1-2   = SSL version (major/minor)
+    Bytes 3-4   = Length of data in the record (excluding the header itself). The maximum SSL supports is 16384 (16K).
 
-Byte 0 can have following values:
-    SSL3_RT_CHANGE_CIPHER_SPEC  20  (x'14')
-    SSL3_RT_ALERT               21  (x'15')
-    SSL3_RT_HANDSHAKE           22  (x'16')
-    SSL3_RT_APPLICATION_DATA    23  (x'17')
+    Byte 0 can have following values:
+        SSL3_RT_CHANGE_CIPHER_SPEC  20  (x'14')
+        SSL3_RT_ALERT               21  (x'15')
+        SSL3_RT_HANDSHAKE           22  (x'16')
+        SSL3_RT_APPLICATION_DATA    23  (x'17')
 
-Bytes 1-2 in the record have the following version values:
-    SSL3_VERSION        x'0300'
-    TLS1_VERSION        x'0301'
+    Bytes 1-2 in the record have the following version values:
+        SSL3_VERSION        x'0300'
+        TLS1_VERSION        x'0301'
 
-FORMAT OF AN SSL HANDHSAKE RECORD
-Byte   0       = SSL record type = 22 (SSL3_RT_HANDSHAKE)
-Bytes 1-2      = SSL version (major/minor)
-Bytes 3-4      = Length of data in the record (excluding the header itself).
-Byte   5       = Handshake type
-Bytes 6-8      = Length of data to follow in this record
-Bytes 9-n      = Command-specific data
+    FORMAT OF AN SSL HANDHSAKE RECORD
+    Byte   0       = SSL record type = 22 (SSL3_RT_HANDSHAKE)
+    Bytes 1-2      = SSL version (major/minor)
+    Bytes 3-4      = Length of data in the record (excluding the header itself).
+    Byte   5       = Handshake type
+    Bytes 6-8      = Length of data to follow in this record
+    Bytes 9-n      = Command-specific data
 
 
-BYTE 5 in the record has the following handhsake type values:
-    SSL3_MT_HELLO_REQUEST            0   (x'00')
-    SSL3_MT_CLIENT_HELLO             1   (x'01')
-    SSL3_MT_SERVER_HELLO             2   (x'02')
-    SSL3_MT_CERTIFICATE             11   (x'0B')
-    SSL3_MT_SERVER_KEY_EXCHANGE     12   (x'0C'
-    SSL3_MT_CERTIFICATE_REQUEST     13   (x'0D')
-    SSL3_MT_SERVER_DONE             14   (x'0E')
-    SSL3_MT_CERTIFICATE_VERIFY      15   (x'0F')
-    SSL3_MT_CLIENT_KEY_EXCHANGE     16   (x'10')
-    SSL3_MT_FINISHED                20   (x'14')
+    BYTE 5 in the record has the following handhsake type values:
+        SSL3_MT_HELLO_REQUEST            0   (x'00')
+        SSL3_MT_CLIENT_HELLO             1   (x'01')
+        SSL3_MT_SERVER_HELLO             2   (x'02')
+        SSL3_MT_CERTIFICATE             11   (x'0B')
+        SSL3_MT_SERVER_KEY_EXCHANGE     12   (x'0C'
+        SSL3_MT_CERTIFICATE_REQUEST     13   (x'0D')
+        SSL3_MT_SERVER_DONE             14   (x'0E')
+        SSL3_MT_CERTIFICATE_VERIFY      15   (x'0F')
+        SSL3_MT_CLIENT_KEY_EXCHANGE     16   (x'10')
+        SSL3_MT_FINISHED                20   (x'14')
 """
 
 class SSLConnection:
-    #TODO test for versions supported
     def __init__(self, settings):
         self.sock = None
         self.host = settings.host
@@ -74,6 +73,9 @@ class SSLConnection:
     # CLIENT HELLO
 
     def _clientHelloPacket(self, settings):
+        """
+            Constructs client Hello packet. The first packet sent to initiate handshake.
+        """
         cHello = ClientHello()
         session = bytearray(0)
         if settings.cipherSuites is None:
@@ -94,7 +96,7 @@ class SSLConnection:
 
     def startHandshake(self, settings):
         """
-            Starts the handshake process. Sends the client hello and waits for server response.
+            Starts the handshake process. Sends the client hello and waits for server response and parses the response.
         """
         try:
             cHello = ClientHello()
@@ -121,40 +123,6 @@ class SSLConnection:
         except socket.error, msg:
             raise TLSError("[!] Could not connect to target host")
 
-        except socket.gaierror, msg:
-            raise #TODO did for poodle
-
-    def doClientHello(self, host, version):
-        """
-        struct {
-            ProtocolVersion client_version;
-            Random random;
-            SessionID session_id;
-            CipherSuite cipher_suites<2..2^16-1>;
-            CompressionMethod compression_methods<1..2^8-1>;
-            Extension extensions<0..2^16-1>;
-            } ClientHello;
-
-        """
-        try:
-            cHell0 = ClientHello()
-            ciphersuite = CipherSuite.poodleTestSuites
-            pkt = self._clientHelloPacket(version,ciphersuite)
-            self._initSocket()
-            self.sock.send(pkt)
-
-            # read the packet
-            returned_value = self._readRecordLayer(self.sock, None)
-            if returned_value is "Alert":
-                return "Alert"
-            else:
-                return "Supported"
-
-        except socket.error, msg:
-            #TODO handle errors for timeout
-            raise
-            #print "[!] Could not connect to target host because %s" %msg
-            #TODO return or exit or escalate the exception
         except socket.gaierror, msg:
             raise #TODO did for poodle
 
@@ -437,244 +405,6 @@ class SSLConnection:
     def _shutdown(self, resumable):
         self.sock.close()
 
-    def _readRecordLayer(self,sock,parseUntil):
-        # @param parseuntil to stop the parsing when that information is extracted
-        # parseuntil  serverversion, compression
-        b = bytearray(0)
-        recordHeaderLength = 1
-
-        while 1:
-            try:
-                bytes_read = sock.recv(recordHeaderLength - len(b))
-                if len(bytes_read) == 0:
-                    continue
-                    #print "[!] Read 0 bytes from socket"
-
-                b += bytearray(bytes_read)
-
-                if len(b) == 1:
-                    if b[0] in ContentType.all:
-                        recordHeaderLength = 5
-                        if b[0] is ContentType.alert:
-                            #print "Got an alert"#, alert_msg.description
-                            #bytes_read = sock.recv(recordHeaderLength - len(b))
-
-                            """
-                            if len(bytes_read) == 0:
-                                print "[!] Read 0 bytes from socket"
-                            else:
-                                b += bytearray(bytes_read)
-                                alert_msg = Alert().parse(Parser(b))
-                                print alert_msg.level
-                                print alert_msg.description
-                                """
-                            return "Alert"
-                    else:
-                        #TODO did for poodle
-                        #pass
-                        #print "[!] unknown ssl record layer"
-                        break
-                elif len(b) == recordHeaderLength:
-                    break
-
-            except socket.error, msg:
-                pass #TODO did for poodle
-                #print "[!] Error in reading from socket because %s"# %msg
-                break
-
-        #parse the record layer
-        recordLayer = RecordHeader3().parse(Parser(b))
-
-        if recordLayer.length > 16384:
-            raise TLSError("[!] Bufferoverflow, record length more than supported")
-
-        #TODO handle case when in one record server hello, cert and server hello done comes
-
-        b = bytearray(0)
-        while 1:
-            try:
-                bytes_read = sock.recv(recordLayer.length - len(b))
-                #print recordLayer.length, len(b), len(bytes_read)
-            except socket.error, msg:
-                raise TLSError("[!] Error in reading from socket")
-
-            if len(bytes_read) == 0:
-                continue
-                #print "[!] Read 0 bytes from socket"
-
-            b += bytearray(bytes_read)
-            if b[0] is HandshakeType.server_hello:
-                b = b[1:]
-                serverHello = ServerHello().parse(Parser(b))
-
-                if parseUntil is "ServerVersion": return serverHello.server_version
-                if parseUntil is "Compression": return serverHello.compression_method
-                if parseUntil is "Extensions": return serverHello
-
-                return serverHello.cipher_suite
-
-            elif b[0] is HandshakeType.certificate:
-            #TODO serious hack to fetch all data from socket, need to do fetching in more better way
-                if len(b) != recordLayer.length:
-                    bytes_read = sock.recv(recordLayer.length - len(b))
-                    b += bytearray(bytes_read)
-
-                b = b[1:]
-                certificate = Certificate(CertificateType.x509).parse(Parser(b))
-                return certificate
-                #return certificate
-                #print "certtype",len(certificate.certChain.x509List)
-                #for x in certificate.certChain.x509List:
-                #    print x.subject
-                #    print "----"
-            elif b[0] is HandshakeType.server_hello_done:
-                pass
-                #print "[+] Server hello done"
-            else:
-                pass
-                #print "maza nahi aya"
-
-            if len(b) == recordLayer.length:
-                break
-        return
-
-    def enumerateCiphers(self, version, customCipherSuite = None):
-        cipherSuitesDetected = []
-        cHello = ClientHello()
-        cipher_accepted = None
-        cipherSuite = None
-        if customCipherSuite:
-            cipherSuite = copy.copy(customCipherSuite)
-        else:
-            cipherSuite =copy.copy(CipherSuite.all_suites)
-
-        #get the ciphersuites supported in preference order
-        while len(cipherSuite) > 0:
-            pkt = self._clientHelloPacket(version, cipherSuite)
-            self._initSocket()
-            try:
-                self.sock.send(pkt)
-                cipher = self._readRecordLayer(self.sock, None)
-                if cipher in cipherSuite :
-                    cipher_accepted = cipher
-                    cipher_id = '%06x' % cipher
-                    cipher_id = cipher_id.upper() # all names in upper case in constants.py
-                    cipherSuite.remove(cipher_accepted)
-                    #print len(ciphersuite)
-                    if CipherSuite.cipher_suites.has_key(cipher_id):
-                        cipherSuitesDetected.append(cipher_id)
-                        #print CipherSuite.cipher_suites[cipher_id]['name']
-                        self.sock.close()
-                else:
-                    # server returns alert, when no ciphersuits match
-                    if "Alert" in cipher:
-                        break
-
-                    elif cipher is not None:
-                        raise TLSError("[!] Server returned cipher not in ciphersuite")
-                    break
-
-
-            except socket.error, msg:
-                raise TLSError("[!] Could not connect to target host")
-
-        return cipherSuitesDetected
-
-    def isCompressionSupported(self):
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        version=(3,1)
-        pkt = self._clientHelloPacket(version, ciphersuite)
-        self._initSocket()
-
-        try:
-            self.sock.send(pkt)
-            compressionSupported = self._readRecordLayer(self.sock,"Compression")
-            self.sock.close()
-            return compressionSupported
-
-        except socket.error, msg:
-            raise TLSError("[!] Could not connect to target host")
-            #print "[!] Could not connect to target host because %s" %msg
-
-    def scanCertificates(self, version):
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        pkt = self._clientHelloPacket(version, ciphersuite)
-        try:
-            self._initSocket()
-            self.sock.send(pkt)
-            # TODO HACK, get server hello
-            self._readRecordLayer(self.sock, "Certificate")
-            #  HACK get certificate
-            certificate = self._readRecordLayer(self.sock, "Certificate")
-            self.sock.close()
-
-
-            return certificate
-
-        except socket.gaierror, msg:
-            raise TLSError("[!] Could not connect to target host, check whether the domain entered is correct")
-
-        except socket.error, msg:
-            raise TLSError("[!] Could not connect to target host")
-        except SyntaxError as err:
-            raise TLSError("[!] Could not connect to target host")
-
-    def supportedExtensions(self):
-        # Check for all supported extensions
-        cHello = ClientHello()
-        ciphersuite =copy.copy(CipherSuite.all_suites)
-        #TODO fix the version usage
-        version=(3,1)
-        pkt = self._clientHelloPacket(version, ciphersuite)
-        try:
-            self._initSocket()
-            self.sock.send(pkt)
-            server_hello = self._readRecordLayer(self.sock, "Extensions")
-
-            if server_hello is None:
-                print "[!] Error in getting Server Hello. Try again later."
-            else:
-                print "\n[*] TLS EXTENSIONS SUPPORTED"
-                if server_hello.next_protos:
-                    print "[+] Next protocol negotiation supported:"
-                    for e in server_hello.next_protos:
-                        print "     [+]",e
-                if server_hello.server_name:
-                    print "[+] SNI Supported"
-                if server_hello.tackExt:
-                    print "[+] Tack supported"
-                if server_hello.renegotiation_info:
-                    print "[+] Renegotiation supported"
-                if server_hello.heartbeat:
-                    print "[+] Heartbeat supported"
-                if server_hello.ocsp:
-                    print "[+] OCSP stapling supported"
-                if server_hello.session_ticket:
-                    print "[+] Session Ticket TLS supported"
-                if server_hello.ec_point_formats:
-                    print "[+] Ec Point formats supported"
-
-        except socket.gaierror, msg:
-            print "[!] Check whether website exists. Error:%s" %msopenhage
-
-        except socket.error, msg:
-            print "[!] Could not connect to target host because %s" %msg
-            return None
-        except SyntaxError:
-            print "[!] Error in fetching certificate, try again later"
-
-    def getIP(self):
-        addr = socket.gethostbyname(self.host)
-        self.ip = addr
-        return self.ip
-
-    def getIPs(self):
-        addr = socket.gethostbyname(self.host)
-        self.ip = addr
-        return self.ip
-
     def test(self):
         cHello = ClientHello()
         ciphersuite =copy.copy(CipherSuite.all_suites)
@@ -698,8 +428,6 @@ class SSLConnection:
 
         except socket.error, msg:
             raise TLSError("[!] Could not connect to target host")
-        #print "[!] Could not connect to target host because %s" %msg
-
 
 def main():
     conn = SSLConnection(host="google.com",version= (3,1), port = 443)
